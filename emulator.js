@@ -231,15 +231,35 @@ Emulator.prototype.autoBootSequence = function() {
   // Auto-boot sequence: equivalent to "r 0 emu-cpm22a.dsk", "b", "g"
   this.vt100("Loading CP/M 2.2 disk image...\r\n");
   
-  // Step 1: Load disk image into drive 0
-  var file = "../disks/emu-cpm22a.dsk";
-  //this.vt100("Loading " + file + " into drive 0...\r\n");
-  this.autoBooting = true; // Flag to indicate auto-boot sequence
-  this.io_op = 3; // netload of disc image
-  this.loaddrv = 0;
-  this.loaddrvurl = file;
-  this.netload(file);
-  this.gotoState(7 /* STATE_IOWAIT */);
+  // Wait for database to be fully initialized before proceeding
+  var emulator = this;
+  var checkDatabase = function() {
+    if (emulator.memio.dbPromise) {
+      emulator.memio.dbPromise.then(function(db) {
+        // Database is ready, proceed with auto-boot
+        // emulator.vt100("Database initialized, loading disk...\r\n");
+        
+        // Step 1: Load disk image into drive 0
+        var file = "emu-cpm22a.dsk"; // Try relative path first
+        // emulator.vt100("Attempting to load: " + file + "\r\n");
+        emulator.autoBooting = true; // Flag to indicate auto-boot sequence
+        emulator.io_op = 3; // netload of disc image
+        emulator.loaddrv = 0;
+        emulator.loaddrvurl = file;
+        emulator.netload(file);
+        emulator.gotoState(7 /* STATE_IOWAIT */);
+      }).catch(function(error) {
+        emulator.vt100("Database error: " + error.message + "\r\n");
+        emulator.gotoState(2 /* STATE_PROMPT */);
+      });
+    } else {
+      // Database not ready yet, wait a bit and try again
+      setTimeout(checkDatabase, 100);
+    }
+  };
+  
+  // Start checking for database readiness
+  checkDatabase();
 };
 
 Emulator.prototype.doPrompt = function() {
@@ -684,12 +704,29 @@ Emulator.prototype.doWaitIO = function() {
       // Check if this was part of auto-boot sequence
       if (this.autoBooting) {
         this.autoBooting = false;
-        this.vt100("Booting CP/M 2.2...\r\n");
-        // Load bootloader from drive 0 to address 0
-        this.memio.readSector(0, 0, 1, 0);
-        this.cpu.pc = 0;
-        this.io_op = 5; // wait for boot sector load
-        this.gotoState(7 /* STATE_IOWAIT */);
+        this.vt100("Disk loaded, verifying sectors...\r\n");
+        
+        // Verify that the boot sector exists before trying to boot
+        var emulator = this;
+        this.memio.dbPromise.then(function(db) {
+          return db.get('sectors', 0*65536+0*256+1-1); // Check if boot sector exists
+        }).then(function(sector) {
+          if (sector) {
+            // emulator.vt100("Boot sector found, starting CP/M 2.2...\r\n");
+            // Load bootloader from drive 0 to address 0
+            emulator.memio.readSector(0, 0, 1, 0);
+            emulator.cpu.pc = 0;
+            emulator.io_op = 5; // wait for boot sector load
+            emulator.gotoState(7 /* STATE_IOWAIT */);
+          } else {
+            emulator.vt100("ERROR: Boot sector not found in database\r\n");
+            emulator.gotoState(2 /* STATE_PROMPT */);
+          }
+        }).catch(function(error) {
+          emulator.vt100("ERROR: Failed to verify sectors: " + error.message + "\r\n");
+          emulator.gotoState(2 /* STATE_PROMPT */);
+        });
+        
         return false;
       }
       
