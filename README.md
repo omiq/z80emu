@@ -41,7 +41,7 @@ This emulator now works in all modern browsers that support IndexedDB:
 
 ## Recent Changes
 
-### IndexedDB Migration (2024)
+### IndexedDB Migration (2025)
 
 The emulator has been updated to use IndexedDB instead of the deprecated Web SQL Database API. This change:
 
@@ -88,5 +88,5 @@ This project is based on the Intel 8080 CPU Emulator by Stefan Tramm (2010) and 
 
 - Original Intel 8080 emulator: Stefan Tramm (2010)
 - Z80 port: Greg Sydney-Smith (2017)
-- IndexedDB migration: 2024
+- IndexedDB migration: 2025
 - ShellInABox terminal: Markus Gutschke (2008-2009)
