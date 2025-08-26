@@ -44,8 +44,16 @@
   padding:          1px;
 }
 
+/* VT52 Font Definition */
+@font-face {
+  font-family: 'VT52';
+  src: url('vt52.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
 #vt100 #console, #vt100 #alt_console, #vt100 #cursor, #vt100 #lineheight { 
-  font-family:      "DejaVu Sans Mono", "Everson Mono", FreeMono, "Andale Mono", "Lucida Console", monospace;
+  font-family:      "VT52", "DejaVu Sans Mono", "Everson Mono", FreeMono, "Andale Mono", "Lucida Console", monospace;
 }
 
 #vt100 #lineheight { 
@@ -133,8 +141,17 @@
   height:           1ex;
 }
 
-#vt100 #scrollable.inverted { color:            #ffffff;
-                              background-color: #000000; }
+/* Classic green-on-black terminal colors */
+#vt100 #scrollable { 
+  color:            #00ff00;  /* Bright green text */
+  background-color: #000000;  /* Black background */
+  padding:          20px;     /* Add padding around the terminal */
+}
+
+#vt100 #scrollable.inverted { 
+  color:            #ffffff;
+  background-color: #000000; 
+}
 
 @media print {
   #vt100 .scrollback {

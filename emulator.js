@@ -92,6 +92,10 @@ function extend(subClass, baseClass) {
 
 function Emulator(container) {
   this.superClass.constructor.call(this, container);
+  this.autoBooting = false; // Initialize auto-boot flag
+  this.keys = ''; // Initialize keys buffer
+  this.line = ''; // Initialize line buffer
+  this.waitloop = 0; // Initialize wait loop counter
   this.gotoState(1 /* STATE_INIT */);
 };
 extend(Emulator, VT100);
@@ -196,7 +200,6 @@ Emulator.prototype.doInit = function() {
   this.cpu = new Cpu(this.memio, null);
   this.addr = this.cpu.pc;
   this.instrcnt = 640; // 640 ~ 2MHz
-  this.waitloop = 0;
   // function interrupt(n) {
   //   if (n == 0x10) // or 0x08
   //     ...
@@ -227,10 +230,28 @@ Emulator.prototype.doInit = function() {
     '- js8080 by Chris Double (http://www.bluishcoder.co.nz/js8080/)\r\n' +
     '- z80pack by Udo Munk (http://www.unix4fun.org/z80pack/)\r\n' +
     '\r\n' +
-    'Type HELP for a list of commands.\r\n' +
+    'Auto-booting CP/M 2.2...\r\n' +
     '\r\n');
-  this.gotoState(2 /* STATE_PROMPT */);
+  
+  // Auto-boot sequence: load CP/M disk and boot
+  this.autoBootSequence();
+  
   return false;
+};
+
+Emulator.prototype.autoBootSequence = function() {
+  // Auto-boot sequence: equivalent to "r 0 emu-cpm22a.dsk", "b", "g"
+  this.vt100("Loading CP/M 2.2 disk image...\r\n");
+  
+  // Step 1: Load disk image into drive 0
+  var file = "../disks/emu-cpm22a.dsk";
+  this.vt100("Loading " + file + " into drive 0...\r\n");
+  this.autoBooting = true; // Flag to indicate auto-boot sequence
+  this.io_op = 3; // netload of disc image
+  this.loaddrv = 0;
+  this.loaddrvurl = file;
+  this.netload(file);
+  this.gotoState(7 /* STATE_IOWAIT */);
 };
 
 Emulator.prototype.doPrompt = function() {
@@ -667,11 +688,34 @@ Emulator.prototype.doWaitIO = function() {
   case 4: // wait for disk io completion
     this.vt100(".");
     if (this.memio.iocount == 0) {
-      this.vt100("DONE");
+      this.vt100("DONE\r\n");
       this.io_op = 0; // no pending op
       this.loaddrv = null;
       this.loaddrvurl = null;
+      
+      // Check if this was part of auto-boot sequence
+      if (this.autoBooting) {
+        this.autoBooting = false;
+        this.vt100("Booting CP/M 2.2...\r\n");
+        // Load bootloader from drive 0 to address 0
+        this.memio.readSector(0, 0, 1, 0);
+        this.cpu.pc = 0;
+        this.io_op = 5; // wait for boot sector load
+        this.gotoState(7 /* STATE_IOWAIT */);
+        return false;
+      }
+      
       this.gotoState(2 /* STATE_PROMPT */);
+      return false;
+    }
+    break;
+  case 5: // wait for boot sector load completion
+    this.vt100(".");
+    if (this.memio.iocount == 0) {
+      this.vt100("DONE\r\n");
+      this.io_op = 0; // no pending op
+      this.vt100("Starting CP/M 2.2...\r\n");
+      this.gotoState(5 /* STATE_EXEC */); // Start execution
       return false;
     }
     break;

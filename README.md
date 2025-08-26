@@ -26,8 +26,9 @@ This emulator now works in all modern browsers that support IndexedDB:
 ## Quick Start
 
 1. Open `index.html` in a modern web browser
-2. The emulator will start automatically
-3. Type `h` for help to see available commands
+2. The emulator will automatically load CP/M 2.2 and boot it
+3. CP/M will start running immediately - no manual commands needed!
+4. Type `h` for help to see available commands (when not in CP/M)
 
 ## Key Commands
 
@@ -40,6 +41,15 @@ This emulator now works in all modern browsers that support IndexedDB:
 - `io` - Show I/O status
 
 ## Recent Changes
+
+### Auto-Boot Feature (2025)
+
+The emulator now automatically loads and boots CP/M 2.2 on startup, eliminating the need for manual commands. Users no longer need to type:
+- `r 0 emu-cpm22a.dsk` (load disk)
+- `b` (boot)
+- `g` (go/run)
+
+The emulator handles this automatically and CP/M starts running immediately.
 
 ### IndexedDB Migration (2025)
 
