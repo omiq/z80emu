@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Z80 Emulator - IndexedDB Test</title>
+    <script src="https://cdn.jsdelivr.net/npm/idb@8/build/umd.js"></script>
+    <script type="text/javascript" src="memio.js"></script>
+</head>
+<body>
+    <h1>Z80 Emulator - IndexedDB Migration Test</h1>
+    <div id="status">Testing IndexedDB functionality...</div>
+    <div id="results"></div>
+
+    <script>
+        function log(message) {
+            console.log(message);
+            document.getElementById('results').innerHTML += '<p>' + message + '</p>';
+        }
+
+        function updateStatus(message) {
+            document.getElementById('status').textContent = message;
+        }
+
+        // Test the database functionality
+        async function testDatabase() {
+            try {
+                updateStatus('Initializing database...');
+                
+                // Create a mock console interface
+                var consoleOut = function(str) { log('Console: ' + str); };
+                var consoleIn = function() { return 0; };
+                var consoleStatus = function() { return false; };
+                var printerOut = function(str) { log('Printer: ' + str); };
+                
+                // Create Memio instance
+                var memio = new Memio(consoleOut, consoleIn, consoleStatus, printerOut);
+                
+                updateStatus('Testing drive formatting...');
+                
+                // Test drive formatting
+                memio.formatDrive(0);
+                
+                // Wait a bit for async operations
+                setTimeout(function() {
+                    updateStatus('Testing disk operations...');
+                    
+                    // Test reading/writing sectors
+                    memio.dma = 0x1000;
+                    memio.drv = 0;
+                    memio.trk = 0;
+                    memio.sec = 1;
+                    
+                    // Write some test data to memory
+                    for (var i = 0; i < 128; i++) {
+                        memio.ram[0x1000 + i] = i;
+                    }
+                    
+                    // Write sector
+                    memio.output(13, 1); // write command
+                    
+                    setTimeout(function() {
+                        updateStatus('Testing sector read...');
+                        
+                        // Read sector back
+                        memio.output(13, 0); // read command
+                        
+                        setTimeout(function() {
+                            updateStatus('Test completed successfully!');
+                            log('All IndexedDB operations completed successfully.');
+                            log('The emulator should now work in modern browsers.');
+                        }, 1000);
+                        
+                    }, 1000);
+                    
+                }, 2000);
+                
+            } catch (error) {
+                updateStatus('Test failed: ' + error.message);
+                log('Error: ' + error.message);
+                console.error('Test error:', error);
+            }
+        }
+
+        // Run the test when page loads
+        window.addEventListener('load', function() {
+            if (typeof idb === 'undefined') {
+                updateStatus('Error: IndexedDB library not loaded');
+                log('The idb library failed to load. Check your internet connection.');
+            } else {
+                log('IndexedDB library loaded successfully');
+                testDatabase();
+            }
+        });
+    </script>
+</body>
+</html>

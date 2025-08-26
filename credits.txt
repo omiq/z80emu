@@ -1,0 +1,66 @@
+
+CREDITS
+
+The following were useful sources of information during the update for Z80:
+
+(1716h Sat 21 Oct 17 - 2300h Sun 28 Oct 17)
+
+http://www.tramm.li/i8080/
+The starting point
+
+https://github.com/floooh/yakc/tree/master/src/yakc/chips
+z80.cc
+z80.h
+z80_opcodes.cc
+z80_cycles.cc
+
+https://bluishcoder.co.nz/js8080/
+referenced by tramm.li
+js8080 by Chris Double. Starting point for z80 opcode additions.
+
+http://code.google.com/p/shellinabox/ 
+referenced by tramm.li
+VT100 emulator by Markus Gutschke. Used unchanged.
+
+http://www.unix4fun.org/z80pack/
+referenced by tramm.li
+has CBIOS that is used in the cpma.cpm disk image. Udo Munk.
+
+http://www.z80.info/
+z80sflag.htm : timings, opcode -> flags
+decoding.htm
+z80_faq.htm : on NMI and INT (RETI, RETN)
+zip/z80-documented.pdf
+
+http://nemesis.lonestar.org/computers/tandy/software/apps/m4/qd/
+opcodes.txt : 8080 vs Z80
+
+http://www.trs-80.com/wordpress/
+info-z80-reference/ : op code summary
+site also has some disk images
+
+http://www.classiccmp.org/dunfield/
+img54306/ : disk images
+
+http://www.autometer.de/unix4fun/z80pack/ftp/tools/
+
+https://github.com/mamedev/mame/blob/master/src/devices/cpu/z80/
+z80daisy.cpp
+
+https://amaus.org/static/blog/2014/
+20140307%20Running%20Cromemco%20Cromix%20inside%20a%20Z80%20Windows%20Simulator.pdf
+
+http://maben.homeip.net/static/S100/cromemco/
+various, as they used to exist (site gone)
+
+http://www.hartetechnologies.com/manuals/
+
+http://www.gaby.de/
+
+http://www.cpm.z80.de/manuals/zsid-m.pdf
+
+http://www.tramm.li/i8080/
+
+https://archive.org/search.php?query=bitsavers.informatik.uni-stuttgart.de%2Fpdf%2Fzilog%2Fz80%2FZ80_DataBook.pdf
+
+

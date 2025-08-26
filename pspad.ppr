@@ -1,0 +1,81 @@
+[Config]
+Compilator.SaveAll=0
+Compilator.Capture=0
+Compilator.HideOutput=0
+Compilator.ProgSaveAll=0
+Compilator.ProgRunSelection=0
+Compilator.LogType=0
+DefaultCPIndex=0
+LogtoEnd=1
+DontOpen=0
+AbsolutePath=0
+FileFormat=0
+ProjectFilesOnly=0
+[Project tree]
+pspad
+	+Ref
+		..\..\..\..\Greg\Reference\Computing\Z80\z80_opcodes.cc.txt
+		..\..\..\..\Greg\Reference\Computing\Z80\z80_cycles.cc.txt
+		..\..\..\..\Greg\Reference\Library\Mostek - Z80 Programming Manual.pdf
+		..\..\..\..\Greg\Reference\Computing\Z80\z80.h.txt
+		..\..\..\..\Greg\Reference\Computing\Z80\z80.cc.txt
+		credits.txt
+		refs.txt
+	+Folder
+		z80.js
+		emulator.js
+		memio.js
+		vt100.js
+		emu-z80.html
+[Open project files]
+0=z80.js
+1=D:\Websites\cromemco\maben.homeip.net\static\s100\cromemco\sourcecode\CDOS\02.53 CDOS attempt1\floppy.z80
+2=emu-z80.html
+3=refs.txt
+4=run-bds.txt
+5=emulator.js
+6=run-dbase2.txt
+7=D:\Websites\cromemco\maben.homeip.net\static\s100\cromemco\sourcecode\CDOS\02.53 CDOS attempt1\cdos.def
+8=D:\Websites\cromemco\maben.homeip.net\static\s100\cromemco\sourcecode\CPM\CBIOS for Cromemco 4FDC or CCS 2422\4FDCBIOS.Z80
+9=memio.js
+10=D:\Websites\cromemco\maben.homeip.net\static\s100\cromemco\sourcecode\CPM\CBIOS for Cromemco 4FDC or CCS 2422\4FDCBOOT.Z80
+11=..\..\..\..\..\AppData\Local\Temp\7zO3E7C.tmp\iosim.c
+[Selected Project Files]
+Main=
+Selected=D:\Websites\cromemco\maben.homeip.net\static\s100\cromemco\sourcecode\CPM\CBIOS for Cromemco 4FDC or CCS 2422\4FDCBOOT.Z80
+[z80.js]
+TopLine=1
+Caret=16,2
+[D:\Websites\cromemco\maben.homeip.net\static\s100\cromemco\sourcecode\CDOS\02.53 CDOS attempt1\floppy.z80]
+TopLine=1
+Caret=24,10
+[emu-z80.html]
+TopLine=1
+Caret=6,8
+[refs.txt]
+TopLine=1
+Caret=1,33
+[run-bds.txt]
+TopLine=194
+Caret=3,605
+[emulator.js]
+TopLine=632
+Caret=6,607
+[run-dbase2.txt]
+TopLine=186
+Caret=4,233
+[D:\Websites\cromemco\maben.homeip.net\static\s100\cromemco\sourcecode\CDOS\02.53 CDOS attempt1\cdos.def]
+TopLine=9
+Caret=1,1
+[D:\Websites\cromemco\maben.homeip.net\static\s100\cromemco\sourcecode\CPM\CBIOS for Cromemco 4FDC or CCS 2422\4FDCBIOS.Z80]
+TopLine=253
+Caret=11,453
+[memio.js]
+TopLine=324
+Caret=1,341
+[D:\Websites\cromemco\maben.homeip.net\static\s100\cromemco\sourcecode\CPM\CBIOS for Cromemco 4FDC or CCS 2422\4FDCBOOT.Z80]
+TopLine=7
+Caret=13,41
+[..\..\..\..\..\AppData\Local\Temp\7zO3E7C.tmp\iosim.c]
+TopLine=9
+Caret=1,1
