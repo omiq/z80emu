@@ -1911,9 +1911,7 @@ VT100.prototype.toggleBell = function() {
 };
 
 VT100.prototype.about = function() {
-  alert("VT100 Terminal Emulator " + "2.10 (revision 186)" +
-        "\nCopyright 2008-2009 by Markus Gutschke\n" +
-        "For more information check http://shellinabox.com");
+  alert("Online CP/M 2.2 Emulator\nChris Garrett\nhttps://retrogamecoders.com/");
 };
 
 VT100.prototype.hideContextMenu = function() {

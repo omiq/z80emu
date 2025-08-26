@@ -218,19 +218,7 @@ Emulator.prototype.doInit = function() {
 	function(vt){return function(e){vt.handleDrop(e)}}(this), false);
 
   this.printUnicode(
-    '\u001Bc\u001B[34;4m' +
-    '\r\n' +
-    'Zilog Z80 CPU Emulator\u001B[0m\r\n' +
-    'Release 0.01 Copyright (C) 2017 by Greg Sydney-Smith\r\n'+
-    '\r\n' +
-    'Based on:\r\n' +
-    '- emu8080 by Stefan Tramm (http://www.tramm.li/i8080/emu8080.html)\r\n' +
-    '- ShellInABox and its marvelous VT100 emulator by Markus Gutschke\r\n' +
-    '  (http://code.google.com/p/shellinabox/)\r\n' +
-    '- js8080 by Chris Double (http://www.bluishcoder.co.nz/js8080/)\r\n' +
-    '- z80pack by Udo Munk (http://www.unix4fun.org/z80pack/)\r\n' +
-    '\r\n' +
-    'Auto-booting CP/M 2.2...\r\n' +
+   'CP/M 2.2 starting ...\r\n' +
     '\r\n');
   
   // Auto-boot sequence: load CP/M disk and boot
@@ -245,7 +233,7 @@ Emulator.prototype.autoBootSequence = function() {
   
   // Step 1: Load disk image into drive 0
   var file = "../disks/emu-cpm22a.dsk";
-  this.vt100("Loading " + file + " into drive 0...\r\n");
+  //this.vt100("Loading " + file + " into drive 0...\r\n");
   this.autoBooting = true; // Flag to indicate auto-boot sequence
   this.io_op = 3; // netload of disc image
   this.loaddrv = 0;
