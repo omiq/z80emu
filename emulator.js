@@ -696,7 +696,7 @@ Emulator.prototype.doWaitIO = function() {
   case 4: // wait for disk io completion
     this.vt100(".");
     if (this.memio.iocount == 0) {
-      this.vt100("DONE\r\n");
+      // this.vt100("DONE\r\n");
       this.io_op = 0; // no pending op
       this.loaddrv = null;
       this.loaddrvurl = null;
@@ -704,7 +704,7 @@ Emulator.prototype.doWaitIO = function() {
       // Check if this was part of auto-boot sequence
       if (this.autoBooting) {
         this.autoBooting = false;
-        this.vt100("Disk loaded, verifying sectors...\r\n");
+        // this.vt100("Disk loaded, verifying sectors...\r\n");
         
         // Verify that the boot sector exists before trying to boot
         var emulator = this;
@@ -737,9 +737,9 @@ Emulator.prototype.doWaitIO = function() {
   case 5: // wait for boot sector load completion
     this.vt100(".");
     if (this.memio.iocount == 0) {
-      this.vt100("DONE\r\n");
+      // this.vt100("DONE\r\n");
       this.io_op = 0; // no pending op
-      this.vt100("Starting CP/M 2.2...\r\n");
+      //this.vt100("Starting CP/M 2.2...\r\n");
       this.gotoState(5 /* STATE_EXEC */); // Start execution
       return false;
     }
