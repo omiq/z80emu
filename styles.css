@@ -70,8 +70,8 @@
 }
 
 #vt100 #cursor.bright { 
-  background-color: #e60000;
-  color:            white;
+  background-color: #00ff00;  /* Green background */
+  color:            #000000;  /* Black text for contrast */
 }
 
 #vt100 #cursor.dim {
@@ -79,7 +79,7 @@
 }
 
 #vt100 #cursor.inactive {
-  border:           1px solid #e60000;
+  border:           1px solid #00ff00;  /* Green border */
   margin:           -1px;
 }
 
