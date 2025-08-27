@@ -86,7 +86,7 @@ html, body {
   overflow:         hidden;
   z-index:          1;
   width:            1em;      /* Make cursor a square */
-  height:           1.2em;    /* Match line height */
+  height:           1em;      /* Match character height instead of line height */
   background-color: #00ff00;  /* Default green background */
   color:            #000000;  /* Black text for contrast */
 }

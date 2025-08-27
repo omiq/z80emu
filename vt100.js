@@ -206,8 +206,8 @@ function VT100(container) {
       // Reposition cursor after resize
       if (vt100.cursor.style.visibility != 'hidden') {
         var visibleY = vt100.cursorY;
-        var scrollableTop = vt100.scrollable.offsetTop;
-        vt100.cursor.style.top = (visibleY*vt100.cursorHeight + scrollableTop) + 'px';
+        // Position cursor at the correct line with padding offset and baseline alignment
+        vt100.cursor.style.top = (visibleY*vt100.cursorHeight + 20 - 2) + 'px';
       }
     };
   }(this);
@@ -232,6 +232,44 @@ function VT100(container) {
   this.statusString       = '';
   this.internalClipboard  = undefined;
   this.reset(true);
+  
+  // Add debugging function to console
+  window.debugCursor = function() {
+    console.log('Cursor Debug Info:');
+    console.log('cursor element:', this.cursor);
+    console.log('cursorX:', this.cursorX);
+    console.log('cursorY:', this.cursorY);
+    console.log('cursorHeight:', this.cursorHeight);
+    console.log('cursorWidth:', this.cursorWidth);
+    console.log('scrollable.offsetTop:', this.scrollable.offsetTop);
+    console.log('scrollable.offsetLeft:', this.scrollable.offsetLeft);
+    console.log('scrollable.clientTop:', this.scrollable.clientTop);
+    console.log('scrollable.clientLeft:', this.scrollable.clientLeft);
+    console.log('scrollable.offsetHeight:', this.scrollable.offsetHeight);
+    console.log('scrollable.offsetWidth:', this.scrollable.offsetWidth);
+    console.log('cursor.style.top:', this.cursor.style.top);
+    console.log('cursor.style.left:', this.cursor.style.left);
+    console.log('cursor.style.visibility:', this.cursor.style.visibility);
+    console.log('cursor.className:', this.cursor.className);
+  }.bind(this);
+  
+  // Add function to manually position cursor for testing
+  window.setCursorPosition = function(x, y) {
+    console.log('Setting cursor position to:', x, y);
+    this.cursorX = x;
+    this.cursorY = y;
+    // Position cursor with correct offset for padding and baseline alignment
+    this.cursor.style.top = (y * this.cursorHeight + 20 - 2) + 'px';
+    this.cursor.style.left = (x * this.cursorWidth + 20) + 'px';
+    console.log('Cursor positioned at:', this.cursor.style.top, this.cursor.style.left);
+  }.bind(this);
+  
+  // Add function to test different Y offsets
+  window.testCursorY = function(y) {
+    console.log('Testing Y position:', y);
+    this.cursor.style.top = y + 'px';
+    console.log('Cursor Y set to:', y + 'px');
+  }.bind(this);
 }
 
 VT100.prototype.reset = function(clearHistory) {
@@ -1621,17 +1659,19 @@ VT100.prototype.putString = function(x, y, text, color, style) {
     this.cursorY = 0;
   }
   if (pixelY >= 0) {
-    this.cursor.style.top           = pixelY + 'px';
+    // Apply baseline alignment to pixelY positioning as well
+    this.cursor.style.top           = (pixelY - 2) + 'px';
   } else {
     // Position cursor based on the actual visible position, not the absolute position
     var visibleY = this.cursorY;
     // Calculate cursor position relative to the scrollable container
     var scrollableTop = this.scrollable.offsetTop;
     var scrollableLeft = this.scrollable.offsetLeft;
-    this.cursor.style.top           = (visibleY*this.cursorHeight + scrollableTop) + 'px';
+    // Position cursor at the correct line with padding offset and baseline alignment
+    this.cursor.style.top           = (visibleY*this.cursorHeight + 20 - 2) + 'px';
     // Also ensure cursor X position is relative to scrollable container
     if (pixelX < 0) {
-      this.cursor.style.left        = (this.cursorX*this.cursorWidth + scrollableLeft) + 'px';
+      this.cursor.style.left        = (this.cursorX*this.cursorWidth + 20) + 'px';
     }
   }
 
@@ -1771,10 +1811,9 @@ VT100.prototype.showCursor = function(x, y) {
       this.cursorX = newX;
       this.cursorY = newY;
       // Update visual position
-      var scrollableTop = this.scrollable.offsetTop;
-      var scrollableLeft = this.scrollable.offsetLeft;
-      this.cursor.style.top = (this.cursorY*this.cursorHeight + scrollableTop) + 'px';
-      this.cursor.style.left = (this.cursorX*this.cursorWidth + scrollableLeft) + 'px';
+      // Position cursor at the correct line with padding offset and baseline alignment
+      this.cursor.style.top = (this.cursorY*this.cursorHeight + 20 - 2) + 'px';
+      this.cursor.style.left = (this.cursorX*this.cursorWidth + 20) + 'px';
     }
     return true;
   }
@@ -2833,6 +2872,7 @@ VT100.prototype.beep = function() {
 
 VT100.prototype.bs = function() {
   if (this.cursorX > 0) {
+    console.log('Backspace: moving from cursorX=' + this.cursorX + ' to ' + (this.cursorX - 1) + ', cursorY=' + this.cursorY);
     this.gotoXY(this.cursorX - 1, this.cursorY);
     this.needWrap = false;
   }
@@ -2930,10 +2970,9 @@ VT100.prototype.lf = function(count) {
       this.cursorY = this.cursorY + 1;
     }
           // Update cursor visual position
-      var scrollableTop = this.scrollable.offsetTop;
-      var scrollableLeft = this.scrollable.offsetLeft;
-      this.cursor.style.top = (this.cursorY*this.cursorHeight + scrollableTop) + 'px';
-      this.cursor.style.left = (this.cursorX*this.cursorWidth + scrollableLeft) + 'px';
+      // Position cursor at the correct line with padding offset and baseline alignment
+      this.cursor.style.top = (this.cursorY*this.cursorHeight + 20 - 2) + 'px';
+      this.cursor.style.left = (this.cursorX*this.cursorWidth + 20) + 'px';
   }
   this.needWrap = false; // Reset wrap flag after line feed
 };
