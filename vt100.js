@@ -1651,8 +1651,8 @@ VT100.prototype.putString = function(x, y, text, color, style) {
   // Calculate the actual cursor position relative to the visible terminal
   this.cursorY                      = yIdx - this.numScrollbackLines;
   // Ensure cursor stays within the visible terminal area
-  if (this.cursorY >= this.terminalHeight) {
-    this.cursorY = this.terminalHeight - 1;
+  if (this.cursorY >= this.terminalHeight - 1) {
+    this.cursorY = this.terminalHeight - 2;
   }
   if (this.cursorY < 0) {
     this.cursorY = 0;
