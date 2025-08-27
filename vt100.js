@@ -96,6 +96,9 @@
 // #define MOUSE_CLICK    2
 
 function VT100(container) {
+  // Enhanced terminal compatibility - supports multiple terminal standards
+  this.terminalMode = 'vt100'; // Default mode, can be 'televideo', 'adm3a', 'ansi'
+  
   if (typeof linkifyURLs == 'undefined' || linkifyURLs <= 0) {
     this.urlRE            = null;
   } else {
@@ -175,7 +178,46 @@ function VT100(container) {
   }
   this.getUserSettings();
   this.initializeElements(container);
-  this.maxScrollbackLines = 500;
+  this.maxScrollbackLines = 100; // Reduced to prevent excessive accumulation
+  
+  // Set up periodic cleanup of scrollback buffer
+  setInterval(function(vt100) {
+    return function() {
+      vt100.cleanupScrollback();
+    };
+  }(this), 5000); // Clean up every 5 seconds
+  
+  // Set up cursor blinking
+  setInterval(function(vt100) {
+    return function() {
+      if (vt100.cursor.style.visibility != 'hidden') {
+        if (vt100.cursor.className.indexOf('bright') >= 0) {
+          vt100.cursor.className = 'dim';
+        } else {
+          vt100.cursor.className = 'bright';
+        }
+      }
+    };
+  }(this), 500); // Blink every 500ms
+  
+  // Handle window resize to keep cursor properly positioned
+  var resizeHandler = function(vt100) {
+    return function() {
+      // Reposition cursor after resize
+      if (vt100.cursor.style.visibility != 'hidden') {
+        var visibleY = vt100.cursorY;
+        var scrollableTop = vt100.scrollable.offsetTop;
+        vt100.cursor.style.top = (visibleY*vt100.cursorHeight + scrollableTop) + 'px';
+      }
+    };
+  }(this);
+  
+  // Add resize listener
+  if (window.addEventListener) {
+    window.addEventListener('resize', resizeHandler);
+  } else if (window.attachEvent) {
+    window.attachEvent('onresize', resizeHandler);
+  }
   this.npar               = 0;
   this.par                = [ ];
   this.isQuestionMark     = false;
@@ -223,7 +265,7 @@ VT100.prototype.reset = function(clearHistory) {
                                             this.DirectToFontMap ];
   this.translate                        = this.GMap[this.useGMap];
   this.top                              = 0;
-  this.bottom                           = this.terminalHeight;
+  this.bottom                           = 24; // Fixed terminal height
   this.lastCharacter                    = ' ';
   this.userTabStop                      = [ ];
 
@@ -236,12 +278,152 @@ VT100.prototype.reset = function(clearHistory) {
   }
 
   this.enableAlternateScreen(false);
-  this.gotoXY(0, 0);
+  this.gotoXY(0, this.terminalHeight - 1); // Start at bottom like traditional terminal
+  this.cursor.className = 'bright'; // Ensure cursor starts bright
   this.showCursor();
   this.isInverted                       = false;
   this.refreshInvertedState();
   this.clearRegion(0, 0, this.terminalWidth, this.terminalHeight,
                    this.color, this.style);
+};
+
+// Enhanced terminal compatibility functions
+VT100.prototype.setTerminalMode = function(mode) {
+  this.terminalMode = mode;
+  console.log('Terminal mode set to: ' + mode);
+};
+
+VT100.prototype.handleTelevideoSequence = function(ch) {
+  // Televideo 925/950 terminal escape sequences
+  switch (ch) {
+    case 0x1B: // ESC
+      this.isEsc = 1;
+      break;
+    case 0x0C: // Form feed - clear screen
+      this.clearScreen();
+      break;
+    case 0x0D: // Carriage return
+      this.cr();
+      break;
+    case 0x0A: // Line feed
+      this.lf();
+      break;
+    case 0x08: // Backspace
+      this.bs();
+      break;
+    case 0x09: // Tab
+      this.ht();
+      break;
+    case 0x07: // Bell
+      this.beep();
+      break;
+    default:
+      return false; // Not handled
+  }
+  return true; // Handled
+};
+
+VT100.prototype.handleADM3ASequence = function(ch) {
+  // ADM-3A terminal escape sequences
+  switch (ch) {
+    case 0x1B: // ESC
+      this.isEsc = 1;
+      break;
+    case 0x0C: // Form feed - clear screen
+      this.clearScreen();
+      break;
+    case 0x0D: // Carriage return
+      this.cr();
+      break;
+    case 0x0A: // Line feed
+      this.lf();
+      break;
+    case 0x08: // Backspace
+      this.bs();
+      break;
+    case 0x09: // Tab
+      this.ht();
+      break;
+    case 0x07: // Bell
+      this.beep();
+      break;
+    case 0x1F: // ADM-3A cursor positioning
+      this.isEsc = 20; // Custom state for ADM-3A
+      break;
+    default:
+      return false; // Not handled
+  }
+  return true; // Handled
+};
+
+VT100.prototype.handleGenericANSISequence = function(ch) {
+  // Generic ANSI escape sequences for better compatibility
+  switch (ch) {
+    case 0x1B: // ESC
+      this.isEsc = 1;
+      break;
+    case 0x0C: // Form feed - clear screen
+      this.clearScreen();
+      break;
+    case 0x0D: // Carriage return
+      this.cr();
+      break;
+    case 0x0A: // Line feed
+      this.lf();
+      break;
+    case 0x08: // Backspace
+      this.bs();
+      break;
+    case 0x09: // Tab
+      this.ht();
+      break;
+    case 0x07: // Bell
+      this.beep();
+      break;
+    default:
+      return false; // Not handled
+  }
+  return true; // Handled
+};
+
+VT100.prototype.autoDetectTerminal = function() {
+  // Auto-detect terminal type based on escape sequences received
+  // This can be called periodically or when specific sequences are detected
+  if (this.detectedSequences && this.detectedSequences.length > 0) {
+    var tvCount = 0, admCount = 0, ansiCount = 0;
+    
+    for (var i = 0; i < this.detectedSequences.length; i++) {
+      var seq = this.detectedSequences[i];
+      if (seq.indexOf('TV') !== -1 || seq.indexOf('Televideo') !== -1) {
+        tvCount++;
+      } else if (seq.indexOf('ADM') !== -1 || seq.indexOf('0x1F') !== -1) {
+        admCount++;
+      } else if (seq.indexOf('CSI') !== -1 || seq.indexOf('0x5B') !== -1) {
+        ansiCount++;
+      }
+    }
+    
+    if (tvCount > admCount && tvCount > ansiCount) {
+      this.setTerminalMode('televideo');
+    } else if (admCount > tvCount && admCount > ansiCount) {
+      this.setTerminalMode('adm3a');
+    } else if (ansiCount > 0) {
+      this.setTerminalMode('ansi');
+    }
+  }
+};
+
+VT100.prototype.addTerminalSequence = function(sequence) {
+  // Track detected escape sequences for auto-detection
+  if (!this.detectedSequences) {
+    this.detectedSequences = [];
+  }
+  this.detectedSequences.push(sequence);
+  
+  // Keep only last 10 sequences
+  if (this.detectedSequences.length > 10) {
+    this.detectedSequences.shift();
+  }
 };
 
 VT100.prototype.addListener = function(elem, event, listener) {
@@ -664,7 +846,7 @@ VT100.prototype.initializeElements = function(container) {
   this.cursorY                 = 0;
   this.numScrollbackLines      = 0;
   this.top                     = 0;
-  this.bottom                  = 0x7FFFFFFF;
+  this.bottom                  = 24; // Set to terminal height for proper scrolling
   this.resizer();
   this.focusCursor();
   this.input.focus();
@@ -773,7 +955,7 @@ VT100.prototype.resizer = function() {
   var height                   = (this.isEmbedded ? this.container.clientHeight
                                   : (window.innerHeight ||
                                      document.documentElement.clientHeight ||
-                                     document.body.clientHeight))-1;
+                                     document.body.clientHeight))-20; // Reduced subtraction to prevent clipping
   var partial                  = height % this.cursorHeight;
   this.scrollable.style.height = (height > 0 ? height : 0) + 'px';
   this.padding.style.height    = (partial > 0 ? partial : 0) + 'px';
@@ -832,7 +1014,7 @@ VT100.prototype.resizer = function() {
 
   // Update classNames for lines in the scrollback buffer
   var line                     = console.firstChild;
-  for (var i = 0; i < this.numScrollbackLines; i++) {
+  for (var i = 0; i < this.numScrollbackLines && line; i++) {
     line.className             = 'scrollback';
     line                       = line.nextSibling;
   }
@@ -1127,27 +1309,14 @@ VT100.prototype.insertBlankLine = function(y, color, style) {
 };
 
 VT100.prototype.updateWidth = function() {
-  this.terminalWidth = Math.floor(this.console[this.currentScreen].offsetWidth/
-                                  this.cursorWidth);
+  // Force 80 columns for traditional terminal behavior
+  this.terminalWidth = 80;
   return this.terminalWidth;
 };
 
 VT100.prototype.updateHeight = function() {
-  // We want to be able to display either a terminal window that fills the
-  // entire browser window, or a terminal window that is contained in a
-  // <div> which is embededded somewhere in the web page.
-  if (this.isEmbedded) {
-    // Embedded terminal. Use size of the containing <div> (id="vt100").
-    this.terminalHeight = Math.floor((this.container.clientHeight-1) /
-                                     this.cursorHeight);
-  } else {
-    // Use the full browser window.
-    this.terminalHeight = Math.floor(((window.innerHeight ||
-                                       document.documentElement.clientHeight ||
-                                       document.body.clientHeight)-1)/
-                                     this.cursorHeight);
-  }
-  // ST alert('terminalHeight='+this.terminalHeight);
+  // Force 24 rows for traditional terminal behavior
+  this.terminalHeight = 24;
   return this.terminalHeight;
 };
 
@@ -1158,6 +1327,17 @@ VT100.prototype.updateNumScrollbackLines = function() {
                             this.terminalHeight;
   this.numScrollbackLines = scrollback < 0 ? 0 : scrollback;
   return this.numScrollbackLines;
+};
+
+VT100.prototype.cleanupScrollback = function() {
+  var console = this.console[this.currentScreen];
+  // Ensure we don't exceed maxScrollbackLines
+  while (this.numScrollbackLines > this.maxScrollbackLines && console.firstChild) {
+    console.removeChild(console.firstChild);
+    this.numScrollbackLines--;
+  }
+  // Update scroll position to keep cursor at bottom
+  this.scrollable.scrollTop = this.numScrollbackLines * this.cursorHeight + 1;
 };
 
 VT100.prototype.truncateLines = function(width) {
@@ -1431,12 +1611,28 @@ VT100.prototype.putString = function(x, y, text, color, style) {
     this.cursor.style.left          = this.space.offsetWidth +
                                       console.offsetLeft + 'px';
   }
+  // Calculate the actual cursor position relative to the visible terminal
   this.cursorY                      = yIdx - this.numScrollbackLines;
+  // Ensure cursor stays within the visible terminal area
+  if (this.cursorY >= this.terminalHeight) {
+    this.cursorY = this.terminalHeight - 1;
+  }
+  if (this.cursorY < 0) {
+    this.cursorY = 0;
+  }
   if (pixelY >= 0) {
     this.cursor.style.top           = pixelY + 'px';
   } else {
-    this.cursor.style.top           = yIdx*this.cursorHeight +
-                                      console.offsetTop + 'px';
+    // Position cursor based on the actual visible position, not the absolute position
+    var visibleY = this.cursorY;
+    // Calculate cursor position relative to the scrollable container
+    var scrollableTop = this.scrollable.offsetTop;
+    var scrollableLeft = this.scrollable.offsetLeft;
+    this.cursor.style.top           = (visibleY*this.cursorHeight + scrollableTop) + 'px';
+    // Also ensure cursor X position is relative to scrollable container
+    if (pixelX < 0) {
+      this.cursor.style.left        = (this.cursorX*this.cursorWidth + scrollableLeft) + 'px';
+    }
   }
 
   if (text.length) {
@@ -1558,17 +1754,28 @@ VT100.prototype.hideCursor = function() {
   var hidden = this.cursor.style.visibility == 'hidden';
   if (!hidden) {
     this.cursor.style.visibility = 'hidden';
+    this.cursor.className = 'dim'; // Set cursor to dim state
     return true;
   }
   return false;
 };
 
 VT100.prototype.showCursor = function(x, y) {
-  if (this.cursor.style.visibility) {
+  if (this.cursor.style.visibility == 'hidden') {
     this.cursor.style.visibility = '';
-    this.putString(x == undefined ? this.cursorX : x,
-                   y == undefined ? this.cursorY : y,
-                   '', undefined);
+    this.cursor.className = 'bright'; // Ensure cursor is visible
+    // Update cursor position without calling putString
+    if (x !== undefined || y !== undefined) {
+      var newX = x !== undefined ? x : this.cursorX;
+      var newY = y !== undefined ? y : this.cursorY;
+      this.cursorX = newX;
+      this.cursorY = newY;
+      // Update visual position
+      var scrollableTop = this.scrollable.offsetTop;
+      var scrollableLeft = this.scrollable.offsetLeft;
+      this.cursor.style.top = (this.cursorY*this.cursorHeight + scrollableTop) + 'px';
+      this.cursor.style.left = (this.cursorX*this.cursorWidth + scrollableLeft) + 'px';
+    }
     return true;
   }
   return false;
@@ -2708,15 +2915,27 @@ VT100.prototype.lf = function(count) {
     }
   }
   while (count-- > 0) {
-    if (this.cursorY == this.bottom - 1) {
-      this.scrollRegion(0, this.top + 1,
-                        this.terminalWidth, this.bottom - this.top - 1,
-                        0, -1, this.color, this.style);
-      offset = undefined;
-    } else if (this.cursorY < this.terminalHeight - 1) {
-      this.gotoXY(this.cursorX, this.cursorY + 1);
+    if (this.cursorY >= this.terminalHeight - 1) {
+      // Scroll the entire screen up when we reach the bottom
+      // Use a more direct scrolling approach to avoid extra line feeds
+      var console = this.console[this.currentScreen];
+      if (console.childNodes.length > this.terminalHeight) {
+        // Remove the top line to make room
+        console.removeChild(console.firstChild);
+      }
+      // Keep cursor at the bottom
+      this.cursorY = this.terminalHeight - 1;
+    } else {
+      // Just update cursor position without calling putString
+      this.cursorY = this.cursorY + 1;
     }
+          // Update cursor visual position
+      var scrollableTop = this.scrollable.offsetTop;
+      var scrollableLeft = this.scrollable.offsetLeft;
+      this.cursor.style.top = (this.cursorY*this.cursorHeight + scrollableTop) + 'px';
+      this.cursor.style.left = (this.cursorX*this.cursorWidth + scrollableLeft) + 'px';
   }
+  this.needWrap = false; // Reset wrap flag after line feed
 };
 
 VT100.prototype.ri = function(count) {
@@ -3269,14 +3488,26 @@ VT100.prototype.doControl = function(ch) {
     this.sendControlToPrinter(ch);
     return '';
   }
+  
+  // Enhanced terminal compatibility - try different terminal modes first
+  if (this.terminalMode === 'televideo' && this.handleTelevideoSequence(ch)) {
+    return '';
+  } else if (this.terminalMode === 'adm3a' && this.handleADM3ASequence(ch)) {
+    return '';
+  } else if (this.terminalMode === 'ansi' && this.handleGenericANSISequence(ch)) {
+    return '';
+  }
+  
   var lineBuf                = '';
   switch (ch) {
   case 0x00: /* ignored */                                              break;
   case 0x08: this.bs();                                                 break;
   case 0x09: this.ht();                                                 break;
-  case 0x0A:
-  case 0x0B:
-  case 0x0C:
+  case 0x0A: 
+    this.lf(); 
+    if (!this.crLfMode) break;
+  case 0x0B: this.lf(); if (!this.crLfMode)                             break;
+  case 0x0C: this.lf(); if (!this.crLfMode)                             break;
   case 0x84: this.lf(); if (!this.crLfMode)                             break;
   case 0x0D: this.cr();                                                 break;
   case 0x85: this.cr(); this.lf();                                      break;
@@ -3591,6 +3822,7 @@ VT100.prototype.renderString = function(s, showCursor) {
     // call to this.showCursor()
     this.cursor.style.visibility = '';
   }
+  // Write text at current cursor position
   this.putString(this.cursorX, this.cursorY, s, this.color, this.style);
 };
 

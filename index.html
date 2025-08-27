@@ -27,7 +27,7 @@
 
     -->
     <title>Online CP/M 2.2 Emulator</title>
-    <link rel="stylesheet" href="styles.css" type="text/css"/>
+    <link rel="stylesheet" href="styles.css?v=2025.01.27.14" type="text/css"/>
     <script type="text/javascript"><!--
       // We would like to hide overflowing lines as this can lead to
       // visually jarring results if the browser substitutes oversized
@@ -46,21 +46,31 @@
 
       suppressAllAudio = true;
       linkifyURLs      = 1;
-      userCSSList      = [ [ 
-                           [  ] ];
+      userCSSList      = [];
     --></script>
     <link rel="shortcut icon" href="favicon.ico" type="image/x-icon"/>
-    <link rel="apple-touch-icon" href="apple-touch-icon.png"/>
+    <link rel="apple-touch-icon" href="favicon.ico"/>
     <meta name="application-name" content="z80emu"/>
     <meta name="description" content="CP/M 2.2 Running On Zilog Z80 CPU Emulator"/>
     <meta name="mobile-web-app-capable" content="yes" />
-    <link rel="icon" href="icon32.png" sizes="32x32"/>
-    <link rel="icon" href="icon48.png" sizes="48x48"/>
+    
+    <!-- Open Graph / Social Media Meta Tags -->
+    <meta property="og:title" content="Online CP/M 2.2 Emulator" />
+    <meta property="og:description" content="Run CP/M 2.2 right in your browser with this online Z80 CPU emulator!" />
+    <meta property="og:image" content="Online CPM 2.2 Emulator.png" />
+    <meta property="og:url" content="https://cpm.retrogamecoders.com" />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Online CP/M 2.2 Emulator" />
+    <meta name="twitter:description" content="Run CP/M 2.2 right in your browser with this online Z80 CPU emulator!" />
+    <meta name="twitter:image" content="Online CPM 2.2 Emulator.png" />
+    <link rel="icon" href="favicon.ico" sizes="32x32"/>
+    <link rel="icon" href="favicon.ico" sizes="48x48"/>
     <script src="https://cdn.jsdelivr.net/npm/idb@8/build/umd.js"></script>
-    <script type="text/javascript" src="memio.js"></script>
-    <script type="text/javascript" src="z80.js"></script>
-    <script type="text/javascript" src="vt100.js?v=1.0.0"></script>
-    <script type="text/javascript" src="emulator.js"></script>
+    <script type="text/javascript" src="memio.js?v=2025.01.27.13"></script>
+    <script type="text/javascript" src="z80.js?v=2025.01.27.13"></script>
+    <script type="text/javascript" src="vt100.js?v=2025.01.27.13"></script>
+    <script type="text/javascript" src="emulator.js?v=2025.01.27.13"></script>
     <!--<script type="text/javascript" src="cachedbg.js"></script>-->
     <meta name="description" content="Run CP/M right in your browser with this online emulator!">
   </head>

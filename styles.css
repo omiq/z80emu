@@ -1,3 +1,17 @@
+/* Ensure full viewport height and prevent clipping */
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden; /* Prevent browser scrolling */
+  box-sizing: border-box;
+  background-color: #000000;
+}
+
+* {
+  box-sizing: border-box;
+}
+
 #vt100 a { 
   text-decoration:  none;
   color:            inherit;
@@ -38,10 +52,14 @@
 }
 
 #vt100 #scrollable {
-  overflow-x:       hidden;
-  overflow-y:       scroll;
+  overflow:         hidden;   /* Prevent scrolling within terminal */
   position:         relative;
-  padding:          1px;
+  padding:          20px;     /* Consistent padding */
+  margin-bottom:    20px;     /* Reduced margin for fixed terminal */
+  height:           calc(24 * 1.2em + 40px); /* Fixed height for 24 rows */
+  width:            calc(80 * 0.6em + 40px); /* Fixed width for 80 columns */
+  max-width:        calc(80 * 0.6em + 40px); /* Prevent expansion */
+  max-height:       calc(24 * 1.2em + 40px); /* Prevent expansion */
 }
 
 /* VT52 Font Definition */
@@ -67,15 +85,22 @@
   top:              0px;
   overflow:         hidden;
   z-index:          1;
-}
-
-#vt100 #cursor.bright { 
-  background-color: #00ff00;  /* Green background */
+  width:            1em;      /* Make cursor a square */
+  height:           1.2em;    /* Match line height */
+  background-color: #00ff00;  /* Default green background */
   color:            #000000;  /* Black text for contrast */
 }
 
+#vt100 #cursor.bright { 
+  background-color: #00ff00;  /* Bright green background */
+  color:            #000000;  /* Black text for contrast */
+  visibility:       visible;
+}
+
 #vt100 #cursor.dim {
-  visibility:       hidden;
+  background-color: #004400;  /* Dim green background */
+  color:            #000000;  /* Black text for contrast */
+  visibility:       visible;
 }
 
 #vt100 #cursor.inactive {
@@ -145,12 +170,29 @@
 #vt100 #scrollable { 
   color:            #00ff00;  /* Bright green text */
   background-color: #000000;  /* Black background */
-  padding:          20px;     /* Add padding around the terminal */
 }
 
 #vt100 #scrollable.inverted { 
   color:            #ffffff;
   background-color: #000000; 
+}
+
+/* Additional styles to ensure content is visible */
+#vt100 #console, #vt100 #alt_console {
+  padding-bottom:   60px;     /* Increased bottom padding to console content */
+  min-height:       100%;     /* Ensure console takes full height */
+  margin-bottom:    20px;     /* Additional margin for safety */
+}
+
+/* Ensure the main vt100 container has proper spacing */
+#vt100 {
+  padding:          20px;     /* Consistent padding */
+  margin:           0 auto;   /* Center the terminal */
+  display:          flex;     /* Use flexbox for centering */
+  flex-direction:   column;   /* Stack elements vertically */
+  align-items:      center;   /* Center horizontally */
+  justify-content:  center;   /* Center vertically */
+  min-height:       100vh;    /* Take full viewport height */
 }
 
 @media print {

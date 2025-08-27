@@ -229,7 +229,16 @@ Emulator.prototype.doInit = function() {
 
 Emulator.prototype.autoBootSequence = function() {
   // Auto-boot sequence: equivalent to "r 0 emu-cpm22a.dsk", "b", "g"
-  this.vt100("Loading CP/M 2.2 disk image...\r\n");
+  this.vt100("Loading CP/M 2.2 ... \r\n");
+
+  this.vt100("\t   _____ _____   ____  __ \r\n");
+  this.vt100("\t  / ____|  __ \\ / /  \\/  |\r\n");
+  this.vt100("\t | |    | |__) / /| \\  / |\r\n");
+  this.vt100("\t | |    |  ___/ / | |\\/| |\r\n");
+  this.vt100("\t | |____| |  / /  | |  | |\r\n");
+  this.vt100("\t  \\_____|_| /_/   |_|  |_|");
+  this.vt100("");
+  this.vt100("");
   
   // Wait for database to be fully initialized before proceeding
   var emulator = this;
@@ -265,7 +274,7 @@ Emulator.prototype.autoBootSequence = function() {
 Emulator.prototype.doPrompt = function() {
   this.keys = '';
   this.line = '';
-  this.vt100((this.cursorX != 0 ? '\r\n' : '') + '>>> ');
+  this.vt100((this.cursorX != 0 ? '\r\n' : '') + '\r\n');
   this.gotoState(3 /* STATE_READLINE */);
   return false;
 };
@@ -348,6 +357,7 @@ Emulator.prototype.doCommand = function() {
     break;
   case 'g':
     if (parms.length > 1) this.cpu.pc = parseInt(parms[1],16);
+    this.vt100("Starting execution at PC=" + this.cpu.pc.toString(16) + "\r\n");
     this.gotoState(5 /* STATE_EXEC */);
     break;
   case 'd': // memory dump
@@ -495,6 +505,38 @@ Emulator.prototype.doCommand = function() {
     this.memio.dbWipe();
     this.vt100("DB wiped! now reload this page, please\r\n");
     break;
+  case 'term': // set terminal mode
+    if (parms.length > 1) {
+      var mode = parms[1].toLowerCase();
+      if (mode === 'vt100' || mode === 'televideo' || mode === 'adm3a' || mode === 'ansi') {
+        this.setTerminalMode(mode);
+        this.vt100("Terminal mode set to: " + mode + "\r\n");
+      } else {
+        this.vt100("Available terminal modes: vt100, televideo, adm3a, ansi\r\n");
+      }
+    } else {
+      this.vt100("Current terminal mode: " + this.terminalMode + "\r\n");
+      this.vt100("Use: term <mode> to set terminal mode\r\n");
+      this.vt100("Available modes: vt100, televideo, adm3a, ansi\r\n");
+    }
+    break;
+  case 'debug': // debug memory contents
+    var addr = 0x100;
+    if (parms.length > 1) addr = parseInt(parms[1], 16);
+    this.vt100("Memory dump at " + addr.toString(16) + ":\r\n");
+    for (var i = 0; i < 16; i++) {
+      var byte = this.memio.rd(addr + i);
+      this.vt100(pad(byte.toString(16), 2) + " ");
+    }
+    this.vt100("\r\n");
+    break;
+  case 'test': // test program execution
+    this.vt100("Testing program execution...\r\n");
+    this.vt100("Try: r 0 rogue.dsk\r\n");
+    this.vt100("Then: debug 100 (to see first 16 bytes)\r\n");
+    this.vt100("Then: g 100 (to run the program)\r\n");
+    this.vt100("If it halts, check for unsupported Z80 instructions\r\n");
+    break;
   case '?':
   case 'H':
   case 'h':
@@ -521,6 +563,8 @@ Emulator.prototype.doCommand = function() {
       'instr [n]      show/modify instructions per JS timeslice\r\n' +
       'F d            format disk drive 0..3\r\n' +
       'W              wipe out diskdrives\r\n' +
+      'term [mode]    set terminal mode (vt100, televideo, adm3a, ansi)\r\n' +
+      'debug [addr]   show first 16 bytes at address for debugging\r\n' +
       'Chrome users:  enable popups, "dsk", "ptp", and line printer open a new window\r\n' +
       '');
   }
@@ -538,7 +582,7 @@ Emulator.prototype.doExec = function() {
   this.waitloop = 0;
   for (var i = 0; i < this.instrcnt; ++i) { // number of instructions not cycles!
     if (this.cpu.step() == false) {
-      this.vt100("\r\nHALT\r\n");
+      this.vt100("\r\nHALT or ILLEGAL instruction at PC=" + this.cpu.pc.toString(16) + "\r\n");
       this.gotoState(2 /* STATE_PROMPT */);
       return false;
     }
@@ -619,7 +663,7 @@ Emulator.prototype.netload = function(fname) {
       try {
 	switch (this.readyState) {
 	case 3: // pouring in
-	  emulator.vt100(".");
+	  // emulator.vt100(".");
 	  break;
 	case 4:
 	  //emulator.vt100("s4: rlen " + this.responseText.length + "\r\n");
@@ -679,10 +723,10 @@ Emulator.prototype.doWaitIO = function() {
     break;
   case 3: // load disk image
     if (this.netResponse.length > 0) {
-      this.vt100(this.netResponse[0] + "\r\n");
+      // this.vt100(this.netResponse[0] + "\r\n");
       if (this.netResponse[0] == 'OK') {
         var binimage = this.netResponse[1];
-        this.vt100("writing to disk " + this.loaddrv);
+        // this.vt100("writing to disk " + this.loaddrv);
         this.io_op = 4; // now wait for diskio
         this.memio.loadDriveBin(this.loaddrv, this.loaddrvurl, binimage);
       } else {
@@ -694,7 +738,7 @@ Emulator.prototype.doWaitIO = function() {
     }
     break;
   case 4: // wait for disk io completion
-    this.vt100(".");
+    // this.vt100(".");
     if (this.memio.iocount == 0) {
       // this.vt100("DONE\r\n");
       this.io_op = 0; // no pending op
@@ -735,7 +779,7 @@ Emulator.prototype.doWaitIO = function() {
     }
     break;
   case 5: // wait for boot sector load completion
-    this.vt100(".");
+    // this.vt100(".");
     if (this.memio.iocount == 0) {
       // this.vt100("DONE\r\n");
       this.io_op = 0; // no pending op

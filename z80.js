@@ -182,6 +182,11 @@ Cpu.prototype.IY = function(n) {
   this.iyl = n & 0xFF;
 };
 
+// Z80 helper functions
+Cpu.prototype.sp = function() {
+  return this.sp;
+};
+
 Cpu.prototype.set = function(flag) {
   this.f |= flag;
 };
@@ -231,7 +236,21 @@ Cpu.prototype.cpuStatus = function() {
 Cpu.prototype.step = function() {
   var i = this.memio.rd(this.pc++);
   this.pc &= 0xFFFF;
+  
+  // Handle prefix bytes for Z80 instructions
+  if (this.prefix === 0) {
+    // Check for prefix bytes
+    if (i === 0xCB || i === 0xED || i === 0xDD || i === 0xFD) {
+      this.prefix = i;
+      // Read the next byte as the actual instruction
+      i = this.memio.rd(this.pc++);
+      this.pc &= 0xFFFF;
+    }
+  }
+  
   var r = this.execute(i);
+  // Reset prefix after executing instruction
+  this.prefix = 0;
   this.processInterrupts();
   return r;
 };
@@ -407,8 +426,35 @@ Cpu.prototype.orByte = function(lhs, rhs) {
   return x;
 };
 
+// Z80 helper functions for arithmetic operations
+Cpu.prototype.and1 = function(a, b) {
+  return this.andByte(a, b);
+};
+
+Cpu.prototype.xor1 = function(a, b) {
+  return this.xorByte(a, b);
+};
+
+Cpu.prototype.or1 = function(a, b) {
+  return this.orByte(a, b);
+};
+
+Cpu.prototype.cp1 = function(a, b) {
+  this.sub1(a, b);
+};
+
 Cpu.prototype.add2 = function(a,b) { // ADD nn,nn; 2 bytes 8080+z80
     var r = a + b;
+    // flag computation taken from MAME
+    this.f = (this.f & (SF|ZF|PF)) |
+        (((a^r^b)>>8)&HF)|
+        ((r>>16) & CF) | ((r >> 8) & (YF|XF));
+    return r&0xFFFF;
+}
+
+// Z80 16-bit arithmetic helper functions
+Cpu.prototype.adc2 = function(a,b) { // ADC HL,rr
+    var r = a + b + (this.f & CF);
     // flag computation taken from MAME
     this.f = (this.f & (SF|ZF|PF)) |
         (((a^r^b)>>8)&HF)|
@@ -485,6 +531,7 @@ Cpu.prototype.sbc2 = function(a,b) { // SBC HL,rr
           (((b^a) & (a^r)&0x8000)>>13);
   return r&0xFFFF;
 };
+
 Cpu.prototype.neg1 = function(a) { // NEG ; A
   return this.sub1(0,a);
 };
@@ -493,6 +540,14 @@ Cpu.prototype.in_c1 = function() { // IN r,(C)
   this.f= this.szp[r]|(this.f&CF);
   this.cycles+=12;
   return r;
+};
+
+// Z80 I/O helper functions
+Cpu.prototype.sziff1 = function(val,iff2) { // z80
+    var f = (val)?(val&SF):ZF;
+    f |= (val & (YF|XF));
+    if (iff2) f |= PF;
+    return f;
 };
 Cpu.prototype.rrd = function() { // ignoring WZ
     var addr = this.hl();
@@ -575,10 +630,71 @@ Cpu.prototype.otir = function(x) { // x: 1=OTIR, -1=OTDR
     }
 };
 
+// Z80 block operation helper functions
+Cpu.prototype.ldi = function(x) { // x: 1=LDI, -1=LDD
+    this.w1(this.de(),this.r1(this.hl()));
+    this.HL(this.hl()+x); // ovfl ok: HL() uses 16bits
+    this.DE(this.de()+x);
+    this.BC(this.bc()-1);
+    this.f = (this.f & (SF|ZF|CF)) | (this.bc()? VF : 0); // ignoring XF YF
+};
+
+Cpu.prototype.ldir = function(x) {  // x: 1=LDIR, -1=LDDR
+    this.ldi(x);
+    this.cycles+=16;
+    if (this.bc() != 0) {
+        this.pc -= 2;
+        this.cycles+= 5;
+    }
+};
+
+Cpu.prototype.cpi = function(x) { // ignores XF YF WZ
+    var r = this.a - this.r1(this.hl());
+    this.HL(this.hl()+x); // ovfl ok: HL() uses 16bits
+    this.BC(this.bc()-1);
+    this.f = NF | (this.f&CF) | ((r&0xFF)?(r&SF):ZF) | // #define YAKC_SZ(val) ((val&0xFF)?(val&SF):ZF)
+        (((r & 0xF) > (this.a & 0xF))? HF : 0) |
+        (this.bc()? VF : 0);
+};
+
+Cpu.prototype.cpir = function(x) { // x: 1=CPIR, -1=CPDR
+    this.cpi(x);
+    this.cycles+=16;
+    if ((this.bc()!=0) && !(this.f&ZF)) { // stops after BC or match to A
+        this.pc -= 2;
+        this.cycles+= 5;
+    }
+};
+
+Cpu.prototype.ini = function(x) { // x: 1=INI, -1=IND
+    var r= this.readPort(this.c);
+    this.w1(this.hl(), r);
+    this.HL(this.hl()+x); // ovfl ok: HL() uses 16bits
+    this.b--;
+    this.f = NF | (this.b? 0 : ZF); // doc'd flags only (Mostek Z80 Manual)
+};
+
+Cpu.prototype.inir = function(x) {
+    this.ini(x);
+    this.cycles+=16;
+    if (this.b != 0) {
+        this.pc -= 2;
+        this.cycles+= 5;
+    }
+};
+
+Cpu.prototype.outi = function(x) { // x: 1=OUTI, -1=OUTD
+    var val = this.r1(this.hl());
+    this.HL(this.hl()+x); // ovfl ok: HL() uses 16bits
+    this.b--;
+    this.writePort(this.c,val);
+    this.f = NF | (this.b?0:ZF); // doc'd flags only
+};
+
 //------------------------------------------------------------------------------
 
 Cpu.prototype._ixd = function() { // IX+d
-  return (this.iy()+this.next1s())&0xFFFF;
+  return (this.ix()+this.next1s())&0xFFFF;
 };
 
 Cpu.prototype._iyd = function() { // IY+d
@@ -880,7 +996,29 @@ Cpu.prototype.execute = function(i) {
   case 0x0CA: t1=this.next2(); if (this.zf()) this.pc=t1; this.cycles += 10; break; // JP Z,nn
 
   // 22Oct17. gss.
-  case 0x0CB: next= 0x100; break;
+  case 0x0CB: 
+    {
+      // CB prefix - bit manipulation instructions
+      var op = this.ram[addr + 1];
+      var reg = op & 0x07;
+      var bit = (op >> 3) & 0x07;
+      var operation = (op >> 6) & 0x03;
+      
+      var reg_names = ["B", "C", "D", "E", "H", "L", "(HL)", "A"];
+      var op_names = ["RLC", "RRC", "RL", "RR", "SLA", "SRA", "SLL", "SRL"];
+      var bit_names = ["BIT", "RES", "SET"];
+      
+      var r;
+      if (operation === 0) {
+        r = op_names[bit] + " " + reg_names[reg];
+      } else if (operation === 1) {
+        r = "BIT " + bit + "," + reg_names[reg];
+      } else {
+        r = bit_names[operation - 2] + " " + bit + "," + reg_names[reg];
+      }
+      return [addr + 2, r];
+    }
+    break;
   case 0x100: this.b= this.rlc1(this.b); this.cycles += 8; break; // RLC B
   case 0x101: this.c= this.rlc1(this.c); this.cycles += 8; break; // RLC C
   case 0x102: this.d= this.rlc1(this.d); this.cycles += 8; break; // RLC D
@@ -1186,7 +1324,60 @@ Cpu.prototype.execute = function(i) {
   case 0x0DC: t1=this.next2(); t2=11; if (this.cf()) {this.push(this.pc); this.pc=t1; t2=17;} this.cycles+=t2; break; // CALL C,nn
 
   // 22Oct17. gss.
-  case 0x0DD: next= 0x300; break;
+  case 0x0DD: 
+    {
+      // DD prefix - IX register instructions
+      var op = this.ram[addr + 1];
+      var r;
+      switch(op) {
+        case 0x21: r = "LD IX," + this.r2(addr + 2).toString(16); return [addr + 4, r];
+        case 0x22: r = "LD (" + this.r2(addr + 2).toString(16) + "),IX"; return [addr + 4, r];
+        case 0x23: r = "INC IX"; break;
+        case 0x24: r = "INC IXH"; break;
+        case 0x25: r = "DEC IXH"; break;
+        case 0x26: r = "LD IXH," + this.ram[addr + 2].toString(16); return [addr + 3, r];
+        case 0x29: r = "ADD IX,IX"; break;
+        case 0x2A: r = "LD IX,(" + this.r2(addr + 2).toString(16) + ")"; return [addr + 4, r];
+        case 0x2B: r = "DEC IX"; break;
+        case 0x2C: r = "INC IXL"; break;
+        case 0x2D: r = "DEC IXL"; break;
+        case 0x2E: r = "LD IXL," + this.ram[addr + 2].toString(16); return [addr + 3, r];
+        case 0x34: r = "INC (IX+" + this.ram[addr + 2].toString(16) + ")"; return [addr + 3, r];
+        case 0x35: r = "DEC (IX+" + this.ram[addr + 2].toString(16) + ")"; return [addr + 3, r];
+        case 0x36: r = "LD (IX+" + this.ram[addr + 2].toString(16) + ")," + this.ram[addr + 3].toString(16); return [addr + 4, r];
+        case 0x39: r = "ADD IX,SP"; break;
+        case 0x46: r = "LD B,(IX+" + this.ram[addr + 2].toString(16) + ")"; return [addr + 3, r];
+        case 0x4E: r = "LD C,(IX+" + this.ram[addr + 2].toString(16) + ")"; return [addr + 3, r];
+        case 0x56: r = "LD D,(IX+" + this.ram[addr + 2].toString(16) + ")"; return [addr + 3, r];
+        case 0x5E: r = "LD E,(IX+" + this.ram[addr + 2].toString(16) + ")"; return [addr + 3, r];
+        case 0x66: r = "LD H,(IX+" + this.ram[addr + 2].toString(16) + ")"; return [addr + 3, r];
+        case 0x6E: r = "LD L,(IX+" + this.ram[addr + 2].toString(16) + ")"; return [addr + 3, r];
+        case 0x70: r = "LD (IX+" + this.ram[addr + 2].toString(16) + "),B"; return [addr + 3, r];
+        case 0x71: r = "LD (IX+" + this.ram[addr + 2].toString(16) + "),C"; return [addr + 3, r];
+        case 0x72: r = "LD (IX+" + this.ram[addr + 2].toString(16) + "),D"; return [addr + 3, r];
+        case 0x73: r = "LD (IX+" + this.ram[addr + 2].toString(16) + "),E"; return [addr + 3, r];
+        case 0x74: r = "LD (IX+" + this.ram[addr + 2].toString(16) + "),H"; return [addr + 3, r];
+        case 0x75: r = "LD (IX+" + this.ram[addr + 2].toString(16) + "),L"; return [addr + 3, r];
+        case 0x77: r = "LD (IX+" + this.ram[addr + 2].toString(16) + "),A"; return [addr + 3, r];
+        case 0x7E: r = "LD A,(IX+" + this.ram[addr + 2].toString(16) + ")"; return [addr + 3, r];
+        case 0x86: r = "ADD A,(IX+" + this.ram[addr + 2].toString(16) + ")"; return [addr + 3, r];
+        case 0x8E: r = "ADC A,(IX+" + this.ram[addr + 2].toString(16) + ")"; return [addr + 3, r];
+        case 0x96: r = "SUB (IX+" + this.ram[addr + 2].toString(16) + ")"; return [addr + 3, r];
+        case 0x9E: r = "SBC A,(IX+" + this.ram[addr + 2].toString(16) + ")"; return [addr + 3, r];
+        case 0xA6: r = "AND (IX+" + this.ram[addr + 2].toString(16) + ")"; return [addr + 3, r];
+        case 0xAE: r = "XOR (IX+" + this.ram[addr + 2].toString(16) + ")"; return [addr + 3, r];
+        case 0xB6: r = "OR (IX+" + this.ram[addr + 2].toString(16) + ")"; return [addr + 3, r];
+        case 0xBE: r = "CP (IX+" + this.ram[addr + 2].toString(16) + ")"; return [addr + 3, r];
+        case 0xE1: r = "POP IX"; break;
+        case 0xE3: r = "EX (SP),IX"; break;
+        case 0xE5: r = "PUSH IX"; break;
+        case 0xE9: r = "JP (IX)"; break;
+        case 0xF9: r = "LD SP,IX"; break;
+        default: r = "DD " + op.toString(16); break;
+      }
+      return [addr + 2, r];
+    }
+    break;
   case 0x309: this.IX(this.add2(this.ix(),this.bc())); this.cycles+=15; break; // ADD IX,BC
   case 0x319: this.IX(this.add2(this.ix(),this.de())); this.cycles+=15; break; // ADD IX,DE
   case 0x321: this.IX(this.next2()); this.cycles += 14; break; // LD IX,nn
@@ -1284,13 +1475,81 @@ Cpu.prototype.execute = function(i) {
               this.cycles+=t2; break; // CALL PE,nn
 
   // 23Oct17. gss.
-  case 0x0ED: next= 0x200; break; // TODO: consider cycle=4 here then 4 less in 1xx cases. effect on INTs?
+  case 0x0ED: 
+    {
+      // ED prefix - extended Z80 instructions
+      var op = this.ram[addr + 1];
+      var r;
+      switch(op) {
+        case 0x40: r = "IN B,(C)"; break;
+        case 0x41: r = "OUT (C),B"; break;
+        case 0x42: r = "SBC HL,BC"; break;
+        case 0x43: r = "LD (" + this.r2(addr + 2).toString(16) + "),BC"; return [addr + 4, r];
+        case 0x44: r = "NEG"; break;
+        case 0x45: r = "RETN"; break;
+        case 0x46: r = "IM 0"; break;
+        case 0x47: r = "LD I,A"; break;
+        case 0x48: r = "IN C,(C)"; break;
+        case 0x49: r = "OUT (C),C"; break;
+        case 0x4A: r = "ADC HL,BC"; break;
+        case 0x4B: r = "LD BC,(" + this.r2(addr + 2).toString(16) + ")"; return [addr + 4, r];
+        case 0x4D: r = "RETI"; break;
+        case 0x4F: r = "LD R,A"; break;
+        case 0x50: r = "IN D,(C)"; break;
+        case 0x51: r = "OUT (C),D"; break;
+        case 0x52: r = "SBC HL,DE"; break;
+        case 0x53: r = "LD (" + this.r2(addr + 2).toString(16) + "),DE"; return [addr + 4, r];
+        case 0x56: r = "IM 1"; break;
+        case 0x57: r = "LD A,I"; break;
+        case 0x58: r = "IN E,(C)"; break;
+        case 0x59: r = "OUT (C),E"; break;
+        case 0x5A: r = "ADC HL,DE"; break;
+        case 0x5B: r = "LD DE,(" + this.r2(addr + 2).toString(16) + ")"; return [addr + 4, r];
+        case 0x5E: r = "IM 2"; break;
+        case 0x5F: r = "LD A,R"; break;
+        case 0x60: r = "IN H,(C)"; break;
+        case 0x61: r = "OUT (C),H"; break;
+        case 0x62: r = "SBC HL,HL"; break;
+        case 0x63: r = "LD (" + this.r2(addr + 2).toString(16) + "),HL"; return [addr + 4, r];
+        case 0x67: r = "RRD"; break;
+        case 0x68: r = "IN L,(C)"; break;
+        case 0x69: r = "OUT (C),L"; break;
+        case 0x6A: r = "ADC HL,HL"; break;
+        case 0x6B: r = "LD HL,(" + this.r2(addr + 2).toString(16) + ")"; return [addr + 4, r];
+        case 0x6F: r = "RLD"; break;
+        case 0x72: r = "SBC HL,SP"; break;
+        case 0x73: r = "LD (" + this.r2(addr + 2).toString(16) + "),SP"; return [addr + 4, r];
+        case 0x78: r = "IN A,(C)"; break;
+        case 0x79: r = "OUT (C),A"; break;
+        case 0x7A: r = "ADC HL,SP"; break;
+        case 0x7B: r = "LD SP,(" + this.r2(addr + 2).toString(16) + ")"; return [addr + 4, r];
+        case 0xA0: r = "LDI"; break;
+        case 0xA1: r = "CPI"; break;
+        case 0xA2: r = "INI"; break;
+        case 0xA3: r = "OUTI"; break;
+        case 0xA8: r = "LDD"; break;
+        case 0xA9: r = "CPD"; break;
+        case 0xAA: r = "IND"; break;
+        case 0xAB: r = "OUTD"; break;
+        case 0xB0: r = "LDIR"; break;
+        case 0xB1: r = "CPIR"; break;
+        case 0xB2: r = "INIR"; break;
+        case 0xB3: r = "OTIR"; break;
+        case 0xB8: r = "LDDR"; break;
+        case 0xB9: r = "CPDR"; break;
+        case 0xBA: r = "INDR"; break;
+        case 0xBB: r = "OTDR"; break;
+        default: r = "ED " + op.toString(16); break;
+      }
+      return [addr + 2, r];
+    }
+    break;
 
   case 0x240: this.b= this.in_c1(); break; // IN B,(C); only as doc'ed
   case 0x241: this.writePort(this.c,this.b); this.cycles+=12; break; // OUT (C),B
   case 0x242: this.HL(this.sbc2(this.hl(),this.bc())); this.cycles+=15; break; // SBC HL,BC
-  case 0x243: this.w2(this.next2(),this.bc()); this.cycles+20; break; // LD (nn),BC
-  case 0x244: this.a= neg1(this.a); this.cycles+ 8; break; // NEG
+  case 0x243: this.w2(this.next2(),this.bc()); this.cycles+=20; break; // LD (nn),BC
+  case 0x244: this.a= this.neg1(this.a); this.cycles+= 8; break; // NEG
   case 0x245: this.pc= this.pop(); // RETN ; NMI
               //if (this->irq_device) this->irq_device->reti(); // notify daisy chain, if configured
               this.IFF1 = this.IFF2;
@@ -1307,7 +1566,7 @@ Cpu.prototype.execute = function(i) {
   case 0x250: this.d= this.in_c1(); break; // IN D,(C)
   case 0x251: this.writePort(this.c,this.d); this.cycles+=12; break; // OUT (C),D
   case 0x252: this.HL(this.sbc2(this.hl(),this.de())); this.cycles+=15; break; // SBC HL,DE
-  case 0x253: this.w2(this.next2(),this.de()); this.cycles+20; break; // LD (nn),DE
+  case 0x253: this.w2(this.next2(),this.de()); this.cycles+=20; break; // LD (nn),DE
   case 0x256: this.IM=1; this.cycles+=8; break;
   case 0x257: this.a= this.I; this.f=this.sziff1(this.I,this.IFF2)|(this.f&CF); this.cycles+=20; break; // LD A,I
   case 0x258: this.e= this.in_c1(); break; // IN E,(C)
@@ -1377,7 +1636,60 @@ Cpu.prototype.execute = function(i) {
               this.cycles +=t2; break;
 
   // 22Oct17. gss.
-  case 0x0FD: next=0x400; break;
+  case 0x0FD: 
+    {
+      // FD prefix - IY register instructions
+      var op = this.ram[addr + 1];
+      var r;
+      switch(op) {
+        case 0x21: r = "LD IY," + this.r2(addr + 2).toString(16); return [addr + 4, r];
+        case 0x22: r = "LD (" + this.r2(addr + 2).toString(16) + "),IY"; return [addr + 4, r];
+        case 0x23: r = "INC IY"; break;
+        case 0x24: r = "INC IYH"; break;
+        case 0x25: r = "DEC IYH"; break;
+        case 0x26: r = "LD IYH," + this.ram[addr + 2].toString(16); return [addr + 3, r];
+        case 0x29: r = "ADD IY,IY"; break;
+        case 0x2A: r = "LD IY,(" + this.r2(addr + 2).toString(16) + ")"; return [addr + 4, r];
+        case 0x2B: r = "DEC IY"; break;
+        case 0x2C: r = "INC IYL"; break;
+        case 0x2D: r = "DEC IYL"; break;
+        case 0x2E: r = "LD IYL," + this.ram[addr + 2].toString(16); return [addr + 3, r];
+        case 0x34: r = "INC (IY+" + this.ram[addr + 2].toString(16) + ")"; return [addr + 3, r];
+        case 0x35: r = "DEC (IY+" + this.ram[addr + 2].toString(16) + ")"; return [addr + 3, r];
+        case 0x36: r = "LD (IY+" + this.ram[addr + 2].toString(16) + ")," + this.ram[addr + 3].toString(16); return [addr + 4, r];
+        case 0x39: r = "ADD IY,SP"; break;
+        case 0x46: r = "LD B,(IY+" + this.ram[addr + 2].toString(16) + ")"; return [addr + 3, r];
+        case 0x4E: r = "LD C,(IY+" + this.ram[addr + 2].toString(16) + ")"; return [addr + 3, r];
+        case 0x56: r = "LD D,(IY+" + this.ram[addr + 2].toString(16) + ")"; return [addr + 3, r];
+        case 0x5E: r = "LD E,(IY+" + this.ram[addr + 2].toString(16) + ")"; return [addr + 3, r];
+        case 0x66: r = "LD H,(IY+" + this.ram[addr + 2].toString(16) + ")"; return [addr + 3, r];
+        case 0x6E: r = "LD L,(IY+" + this.ram[addr + 2].toString(16) + ")"; return [addr + 3, r];
+        case 0x70: r = "LD (IY+" + this.ram[addr + 2].toString(16) + "),B"; return [addr + 3, r];
+        case 0x71: r = "LD (IY+" + this.ram[addr + 2].toString(16) + "),C"; return [addr + 3, r];
+        case 0x72: r = "LD (IY+" + this.ram[addr + 2].toString(16) + "),D"; return [addr + 3, r];
+        case 0x73: r = "LD (IY+" + this.ram[addr + 2].toString(16) + "),E"; return [addr + 3, r];
+        case 0x74: r = "LD (IY+" + this.ram[addr + 2].toString(16) + "),H"; return [addr + 3, r];
+        case 0x75: r = "LD (IY+" + this.ram[addr + 2].toString(16) + "),L"; return [addr + 3, r];
+        case 0x77: r = "LD (IY+" + this.ram[addr + 2].toString(16) + "),A"; return [addr + 3, r];
+        case 0x7E: r = "LD A,(IY+" + this.ram[addr + 2].toString(16) + ")"; return [addr + 3, r];
+        case 0x86: r = "ADD A,(IY+" + this.ram[addr + 2].toString(16) + ")"; return [addr + 3, r];
+        case 0x8E: r = "ADC A,(IY+" + this.ram[addr + 2].toString(16) + ")"; return [addr + 3, r];
+        case 0x96: r = "SUB (IY+" + this.ram[addr + 2].toString(16) + ")"; return [addr + 3, r];
+        case 0x9E: r = "SBC A,(IY+" + this.ram[addr + 2].toString(16) + ")"; return [addr + 3, r];
+        case 0xA6: r = "AND (IY+" + this.ram[addr + 2].toString(16) + ")"; return [addr + 3, r];
+        case 0xAE: r = "XOR (IY+" + this.ram[addr + 2].toString(16) + ")"; return [addr + 3, r];
+        case 0xB6: r = "OR (IY+" + this.ram[addr + 2].toString(16) + ")"; return [addr + 3, r];
+        case 0xBE: r = "CP (IY+" + this.ram[addr + 2].toString(16) + ")"; return [addr + 3, r];
+        case 0xE1: r = "POP IY"; break;
+        case 0xE3: r = "EX (SP),IY"; break;
+        case 0xE5: r = "PUSH IY"; break;
+        case 0xE9: r = "JP (IY)"; break;
+        case 0xF9: r = "LD SP,IY"; break;
+        default: r = "FD " + op.toString(16); break;
+      }
+      return [addr + 2, r];
+    }
+    break;
   case 0x409: this.IY(this.add2(this.iy(),this.bc())); this.cycles+=15; break; // ADD IY,BC
   case 0x419: this.IY(this.add2(this.iy(),this.de())); this.cycles+=15; break; // ADD IY,DE
   case 0x421: this.IY(this.next2()); this.cycles += 14; break; // LD IY,nn
@@ -1420,6 +1732,1018 @@ Cpu.prototype.execute = function(i) {
   case 0x4E9: this.pc=this.iy(); this.cycles+= 8; break; // JP IY
   case 0x4F9: this.sp=this.iy(); this.cycles+=10; break; // LD SP,IY
 
+  // CB prefix - Bit manipulation instructions
+  case 0x1CB: // CB prefix instructions
+    {
+      var op = i;
+      var reg = op & 0x07;
+      var bit = (op >> 3) & 0x07;
+      var operation = (op >> 6) & 0x03;
+      
+      var value, addr;
+      
+      // Get register value or memory address
+      switch(reg) {
+        case 0: value = this.b; break;
+        case 1: value = this.c; break;
+        case 2: value = this.d; break;
+        case 3: value = this.e; break;
+        case 4: value = this.h; break;
+        case 5: value = this.l; break;
+        case 6: addr = this.hl(); value = this.memio.rd(addr); break;
+        case 7: value = this.a; break;
+      }
+      
+      // Perform bit operation
+      switch(operation) {
+        case 0: // RLC, RRC, RL, RR, SLA, SRA, SLL, SRL
+          switch(bit) {
+            case 0: // RLC
+              var carry = (value & 0x80) >> 7;
+              value = ((value << 1) | carry) & 0xFF;
+              this.f = (this.f & ~(CF|HF|NF|ZF|SF|PF)) | (carry ? CF : 0) | (value ? 0 : ZF) | (value & SF) | ((value & 1) ? 0 : PF);
+              break;
+            case 1: // RRC
+              var carry = value & 1;
+              value = ((value >> 1) | (carry << 7)) & 0xFF;
+              this.f = (this.f & ~(CF|HF|NF|ZF|SF|PF)) | (carry ? CF : 0) | (value ? 0 : ZF) | (value & SF) | ((value & 1) ? 0 : PF);
+              break;
+            case 2: // RL
+              var carry = (value & 0x80) >> 7;
+              value = ((value << 1) | (this.f & CF)) & 0xFF;
+              this.f = (this.f & ~(CF|HF|NF|ZF|SF|PF)) | (carry ? CF : 0) | (value ? 0 : ZF) | (value & SF) | ((value & 1) ? 0 : PF);
+              break;
+            case 3: // RR
+              var carry = value & 1;
+              value = ((value >> 1) | ((this.f & CF) << 7)) & 0xFF;
+              this.f = (this.f & ~(CF|HF|NF|ZF|SF|PF)) | (carry ? CF : 0) | (value ? 0 : ZF) | (value & SF) | ((value & 1) ? 0 : PF);
+              break;
+            case 4: // SLA
+              var carry = (value & 0x80) >> 7;
+              value = (value << 1) & 0xFF;
+              this.f = (this.f & ~(CF|HF|NF|ZF|SF|PF)) | (carry ? CF : 0) | (value ? 0 : ZF) | (value & SF) | ((value & 1) ? 0 : PF);
+              break;
+            case 5: // SRA
+              var carry = value & 1;
+              value = ((value >> 1) | (value & 0x80)) & 0xFF;
+              this.f = (this.f & ~(CF|HF|NF|ZF|SF|PF)) | (carry ? CF : 0) | (value ? 0 : ZF) | (value & SF) | ((value & 1) ? 0 : PF);
+              break;
+            case 6: // SLL (undocumented)
+              var carry = (value & 0x80) >> 7;
+              value = ((value << 1) | 1) & 0xFF;
+              this.f = (this.f & ~(CF|HF|NF|ZF|SF|PF)) | (carry ? CF : 0) | (value ? 0 : ZF) | (value & SF) | ((value & 1) ? 0 : PF);
+              break;
+            case 7: // SRL
+              var carry = value & 1;
+              value = (value >> 1) & 0xFF;
+              this.f = (this.f & ~(CF|HF|NF|ZF|SF|PF)) | (carry ? CF : 0) | (value ? 0 : ZF) | (value & SF) | ((value & 1) ? 0 : PF);
+              break;
+          }
+          break;
+        case 1: // BIT
+          var bit_mask = 1 << bit;
+          var result = value & bit_mask;
+          this.f = (this.f & ~(ZF|HF|NF|SF|PF)) | (result ? 0 : ZF) | HF | (value & SF) | ((value & 1) ? 0 : PF);
+          break;
+        case 2: // RES
+          var bit_mask = ~(1 << bit);
+          value = value & bit_mask;
+          break;
+        case 3: // SET
+          var bit_mask = 1 << bit;
+          value = value | bit_mask;
+          break;
+      }
+      
+      // Store result back
+      switch(reg) {
+        case 0: this.b = value; break;
+        case 1: this.c = value; break;
+        case 2: this.d = value; break;
+        case 3: this.e = value; break;
+        case 4: this.h = value; break;
+        case 5: this.l = value; break;
+        case 6: this.memio.wr(addr, value); break;
+        case 7: this.a = value; break;
+      }
+      
+      this.cycles += (reg === 6) ? 15 : 8; // Memory operations take longer
+    }
+    break;
+
+  // ED prefix - Extended Z80 instructions
+  case 0x2ED: // ED prefix instructions
+    {
+      switch(i) {
+        case 0x40: // IN B,(C)
+          this.b = this.readPort(this.bc());
+          this.f = (this.f & ~(ZF|SF|HF|NF|PF)) | (this.b ? 0 : ZF) | (this.b & SF) | ((this.b & 1) ? 0 : PF);
+          this.cycles += 12;
+          break;
+        case 0x41: // OUT (C),B
+          this.writePort(this.bc(), this.b);
+          this.cycles += 12;
+          break;
+        case 0x42: // SBC HL,BC
+          var result = this.hl() - this.bc() - (this.f & CF);
+          this.HL(result & 0xFFFF);
+          this.f = (this.f & ~(CF|HF|NF|ZF|SF|PF)) | (result < 0 ? CF : 0) | (result ? 0 : ZF) | (result & 0x8000 ? SF : 0) | NF;
+          this.cycles += 15;
+          break;
+        case 0x43: // LD (nn),BC
+          var addr = this.next2();
+          this.w2(addr, this.bc());
+          this.cycles += 20;
+          break;
+        case 0x44: // NEG
+          var result = 0 - this.a;
+          this.a = result & 0xFF;
+          this.f = (this.f & ~(CF|HF|NF|ZF|SF|PF)) | (result < 0 ? CF : 0) | (result ? 0 : ZF) | (result & 0x80 ? SF : 0) | NF;
+          this.cycles += 8;
+          break;
+        case 0x45: // RETN
+          this.pc = this.pop();
+          this.IFF1 = this.IFF2;
+          this.cycles += 14;
+          break;
+        case 0x46: // IM 0
+          this.IM = 0;
+          this.cycles += 8;
+          break;
+        case 0x47: // LD I,A
+          this.I = this.a;
+          this.cycles += 9;
+          break;
+        case 0x48: // IN C,(C)
+          this.c = this.readPort(this.bc());
+          this.f = (this.f & ~(ZF|SF|HF|NF|PF)) | (this.c ? 0 : ZF) | (this.c & SF) | ((this.c & 1) ? 0 : PF);
+          this.cycles += 12;
+          break;
+        case 0x49: // OUT (C),C
+          this.writePort(this.bc(), this.c);
+          this.cycles += 12;
+          break;
+        case 0x4A: // ADC HL,BC
+          var result = this.hl() + this.bc() + (this.f & CF);
+          this.HL(result & 0xFFFF);
+          this.f = (this.f & ~(CF|HF|NF|ZF|SF|PF)) | (result > 0xFFFF ? CF : 0) | (result ? 0 : ZF) | (result & 0x8000 ? SF : 0);
+          this.cycles += 15;
+          break;
+        case 0x4B: // LD BC,(nn)
+          var addr = this.next2();
+          this.BC(this.r2(addr));
+          this.cycles += 20;
+          break;
+        case 0x4D: // RETI
+          this.pc = this.pop();
+          this.cycles += 14;
+          break;
+        case 0x4F: // LD R,A
+          this.R = this.a;
+          this.cycles += 9;
+          break;
+        case 0x50: // IN D,(C)
+          this.d = this.readPort(this.bc());
+          this.f = (this.f & ~(ZF|SF|HF|NF|PF)) | (this.d ? 0 : ZF) | (this.d & SF) | ((this.d & 1) ? 0 : PF);
+          this.cycles += 12;
+          break;
+        case 0x51: // OUT (C),D
+          this.writePort(this.bc(), this.d);
+          this.cycles += 12;
+          break;
+        case 0x52: // SBC HL,DE
+          var result = this.hl() - this.de() - (this.f & CF);
+          this.HL(result & 0xFFFF);
+          this.f = (this.f & ~(CF|HF|NF|ZF|SF|PF)) | (result < 0 ? CF : 0) | (result ? 0 : ZF) | (result & 0x8000 ? SF : 0) | NF;
+          this.cycles += 15;
+          break;
+        case 0x53: // LD (nn),DE
+          var addr = this.next2();
+          this.w2(addr, this.de());
+          this.cycles += 20;
+          break;
+        case 0x56: // IM 1
+          this.IM = 1;
+          this.cycles += 8;
+          break;
+        case 0x57: // LD A,I
+          this.a = this.I;
+          this.f = (this.f & ~(ZF|SF|HF|NF|PF)) | (this.a ? 0 : ZF) | (this.a & SF) | ((this.a & 1) ? 0 : PF) | (this.IFF2 ? PF : 0);
+          this.cycles += 9;
+          break;
+        case 0x58: // IN E,(C)
+          this.e = this.readPort(this.bc());
+          this.f = (this.f & ~(ZF|SF|HF|NF|PF)) | (this.e ? 0 : ZF) | (this.e & SF) | ((this.e & 1) ? 0 : PF);
+          this.cycles += 12;
+          break;
+        case 0x59: // OUT (C),E
+          this.writePort(this.bc(), this.e);
+          this.cycles += 12;
+          break;
+        case 0x5A: // ADC HL,DE
+          var result = this.hl() + this.de() + (this.f & CF);
+          this.HL(result & 0xFFFF);
+          this.f = (this.f & ~(CF|HF|NF|ZF|SF|PF)) | (result > 0xFFFF ? CF : 0) | (result ? 0 : ZF) | (result & 0x8000 ? SF : 0);
+          this.cycles += 15;
+          break;
+        case 0x5B: // LD DE,(nn)
+          var addr = this.next2();
+          this.DE(this.r2(addr));
+          this.cycles += 20;
+          break;
+        case 0x5E: // IM 2
+          this.IM = 2;
+          this.cycles += 8;
+          break;
+        case 0x5F: // LD A,R
+          this.a = this.R;
+          this.f = (this.f & ~(ZF|SF|HF|NF|PF)) | (this.a ? 0 : ZF) | (this.a & SF) | ((this.a & 1) ? 0 : PF) | (this.IFF2 ? PF : 0);
+          this.cycles += 9;
+          break;
+        case 0x60: // IN H,(C)
+          this.h = this.readPort(this.bc());
+          this.f = (this.f & ~(ZF|SF|HF|NF|PF)) | (this.h ? 0 : ZF) | (this.h & SF) | ((this.h & 1) ? 0 : PF);
+          this.cycles += 12;
+          break;
+        case 0x61: // OUT (C),H
+          this.writePort(this.bc(), this.h);
+          this.cycles += 12;
+          break;
+        case 0x62: // SBC HL,HL
+          var result = this.hl() - this.hl() - (this.f & CF);
+          this.HL(result & 0xFFFF);
+          this.f = (this.f & ~(CF|HF|NF|ZF|SF|PF)) | (result < 0 ? CF : 0) | (result ? 0 : ZF) | (result & 0x8000 ? SF : 0) | NF;
+          this.cycles += 15;
+          break;
+        case 0x63: // LD (nn),HL
+          var addr = this.next2();
+          this.w2(addr, this.hl());
+          this.cycles += 20;
+          break;
+        case 0x67: // RRD
+          var addr = this.hl();
+          var mem = this.memio.rd(addr);
+          var temp = this.a;
+          this.a = (this.a & 0xF0) | ((mem & 0x0F) << 4);
+          mem = ((mem >> 4) & 0x0F) | (temp & 0x0F);
+          this.memio.wr(addr, mem);
+          this.f = (this.f & ~(ZF|SF|HF|NF|PF)) | (this.a ? 0 : ZF) | (this.a & SF) | ((this.a & 1) ? 0 : PF);
+          this.cycles += 18;
+          break;
+        case 0x68: // IN L,(C)
+          this.l = this.readPort(this.bc());
+          this.f = (this.f & ~(ZF|SF|HF|NF|PF)) | (this.l ? 0 : ZF) | (this.l & SF) | ((this.l & 1) ? 0 : PF);
+          this.cycles += 12;
+          break;
+        case 0x69: // OUT (C),L
+          this.writePort(this.bc(), this.l);
+          this.cycles += 12;
+          break;
+        case 0x6A: // ADC HL,HL
+          var result = this.hl() + this.hl() + (this.f & CF);
+          this.HL(result & 0xFFFF);
+          this.f = (this.f & ~(CF|HF|NF|ZF|SF|PF)) | (result > 0xFFFF ? CF : 0) | (result ? 0 : ZF) | (result & 0x8000 ? SF : 0);
+          this.cycles += 15;
+          break;
+        case 0x6B: // LD HL,(nn)
+          var addr = this.next2();
+          this.HL(this.r2(addr));
+          this.cycles += 20;
+          break;
+        case 0x6F: // RLD
+          var addr = this.hl();
+          var mem = this.memio.rd(addr);
+          var temp = this.a;
+          this.a = (this.a & 0xF0) | (mem >> 4);
+          mem = ((mem << 4) & 0xF0) | (temp & 0x0F);
+          this.memio.wr(addr, mem);
+          this.f = (this.f & ~(ZF|SF|HF|NF|PF)) | (this.a ? 0 : ZF) | (this.a & SF) | ((this.a & 1) ? 0 : PF);
+          this.cycles += 18;
+          break;
+        case 0x70: // IN (C)
+          var value = this.readPort(this.bc());
+          this.f = (this.f & ~(ZF|SF|HF|NF|PF)) | (value ? 0 : ZF) | (value & SF) | ((value & 1) ? 0 : PF);
+          this.cycles += 12;
+          break;
+        case 0x71: // OUT (C),0
+          this.writePort(this.bc(), 0);
+          this.cycles += 12;
+          break;
+        case 0x72: // SBC HL,SP
+          var result = this.hl() - this.sp - (this.f & CF);
+          this.HL(result & 0xFFFF);
+          this.f = (this.f & ~(CF|HF|NF|ZF|SF|PF)) | (result < 0 ? CF : 0) | (result ? 0 : ZF) | (result & 0x8000 ? SF : 0) | NF;
+          this.cycles += 15;
+          break;
+        case 0x73: // LD (nn),SP
+          var addr = this.next2();
+          this.w2(addr, this.sp);
+          this.cycles += 20;
+          break;
+        case 0x78: // IN A,(C)
+          this.a = this.readPort(this.bc());
+          this.f = (this.f & ~(ZF|SF|HF|NF|PF)) | (this.a ? 0 : ZF) | (this.a & SF) | ((this.a & 1) ? 0 : PF);
+          this.cycles += 12;
+          break;
+        case 0x79: // OUT (C),A
+          this.writePort(this.bc(), this.a);
+          this.cycles += 12;
+          break;
+        case 0x7A: // ADC HL,SP
+          var result = this.hl() + this.sp + (this.f & CF);
+          this.HL(result & 0xFFFF);
+          this.f = (this.f & ~(CF|HF|NF|ZF|SF|PF)) | (result > 0xFFFF ? CF : 0) | (result ? 0 : ZF) | (result & 0x8000 ? SF : 0);
+          this.cycles += 15;
+          break;
+        case 0x7B: // LD SP,(nn)
+          var addr = this.next2();
+          this.sp = this.r2(addr);
+          this.cycles += 20;
+          break;
+        case 0xA0: // LDI
+          var source = this.hl();
+          var dest = this.de();
+          var value = this.memio.rd(source);
+          this.memio.wr(dest, value);
+          this.HL((source + 1) & 0xFFFF);
+          this.DE((dest + 1) & 0xFFFF);
+          this.BC((this.bc() - 1) & 0xFFFF);
+          this.f = (this.f & ~(HF|NF|PF)) | HF | ((this.bc() !== 0) ? PF : 0);
+          this.cycles += 16;
+          break;
+        case 0xA1: // CPI
+          var addr = this.hl();
+          var value = this.memio.rd(addr);
+          var result = this.a - value;
+          this.HL((addr + 1) & 0xFFFF);
+          this.BC((this.bc() - 1) & 0xFFFF);
+          this.f = (this.f & ~(HF|NF|ZF|SF|PF)) | (result ? 0 : ZF) | (result & 0x80 ? SF : 0) | ((this.bc() !== 0) ? PF : 0) | NF;
+          this.cycles += 16;
+          break;
+        case 0xA2: // INI
+          var addr = this.hl();
+          var value = this.readPort(this.bc());
+          this.memio.wr(addr, value);
+          this.HL((addr + 1) & 0xFFFF);
+          this.b = (this.b - 1) & 0xFF;
+          this.f = (this.b ? 0 : ZF) | (this.b & SF) | NF;
+          this.cycles += 16;
+          break;
+        case 0xA3: // OUTI
+          var addr = this.hl();
+          var value = this.memio.rd(addr);
+          this.writePort(this.bc(), value);
+          this.HL((addr + 1) & 0xFFFF);
+          this.b = (this.b - 1) & 0xFF;
+          this.f = (this.b ? 0 : ZF) | (this.b & SF) | NF;
+          this.cycles += 16;
+          break;
+        case 0xB0: // LDIR
+          do {
+            var source = this.hl();
+            var dest = this.de();
+            var value = this.memio.rd(source);
+            this.memio.wr(dest, value);
+            this.HL((source + 1) & 0xFFFF);
+            this.DE((dest + 1) & 0xFFFF);
+            this.BC((this.bc() - 1) & 0xFFFF);
+            this.cycles += 21;
+          } while (this.bc() !== 0);
+          this.f = (this.f & ~(HF|NF|PF)) | HF;
+          this.cycles += 5;
+          break;
+        case 0xB1: // CPIR
+          do {
+            var addr = this.hl();
+            var value = this.memio.rd(addr);
+            var result = this.a - value;
+            this.HL((addr + 1) & 0xFFFF);
+            this.BC((this.bc() - 1) & 0xFFFF);
+            this.cycles += 21;
+          } while (this.bc() !== 0 && result !== 0);
+          this.f = (this.f & ~(HF|NF|ZF|SF|PF)) | (result ? 0 : ZF) | (result & 0x80 ? SF : 0) | ((this.bc() !== 0) ? PF : 0) | NF;
+          this.cycles += 5;
+          break;
+        case 0xB2: // INIR
+          do {
+            var addr = this.hl();
+            var value = this.readPort(this.bc());
+            this.memio.wr(addr, value);
+            this.HL((addr + 1) & 0xFFFF);
+            this.b = (this.b - 1) & 0xFF;
+            this.cycles += 21;
+          } while (this.b !== 0);
+          this.f = (this.f & ~(ZF|SF|NF)) | ZF | NF;
+          this.cycles += 5;
+          break;
+        case 0xB3: // OTIR
+          do {
+            var addr = this.hl();
+            var value = this.memio.rd(addr);
+            this.writePort(this.bc(), value);
+            this.HL((addr + 1) & 0xFFFF);
+            this.b = (this.b - 1) & 0xFF;
+            this.cycles += 21;
+          } while (this.b !== 0);
+          this.f = (this.f & ~(ZF|SF|NF)) | ZF | NF;
+          this.cycles += 5;
+          break;
+        case 0xB8: // LDDR
+          do {
+            var source = this.hl();
+            var dest = this.de();
+            var value = this.memio.rd(source);
+            this.memio.wr(dest, value);
+            this.HL((source - 1) & 0xFFFF);
+            this.DE((dest - 1) & 0xFFFF);
+            this.BC((this.bc() - 1) & 0xFFFF);
+            this.cycles += 21;
+          } while (this.bc() !== 0);
+          this.f = (this.f & ~(HF|NF|PF)) | HF;
+          this.cycles += 5;
+          break;
+        case 0xB9: // CPDR
+          do {
+            var addr = this.hl();
+            var value = this.memio.rd(addr);
+            var result = this.a - value;
+            this.HL((addr - 1) & 0xFFFF);
+            this.BC((this.bc() - 1) & 0xFFFF);
+            this.cycles += 21;
+          } while (this.bc() !== 0 && result !== 0);
+          this.f = (this.f & ~(HF|NF|ZF|SF|PF)) | (result ? 0 : ZF) | (result & 0x80 ? SF : 0) | ((this.bc() !== 0) ? PF : 0) | NF;
+          this.cycles += 5;
+          break;
+        case 0xBA: // INDR
+          do {
+            var addr = this.hl();
+            var value = this.readPort(this.bc());
+            this.memio.wr(addr, value);
+            this.HL((addr - 1) & 0xFFFF);
+            this.b = (this.b - 1) & 0xFF;
+            this.cycles += 21;
+          } while (this.b !== 0);
+          this.f = (this.f & ~(ZF|SF|NF)) | ZF | NF;
+          this.cycles += 5;
+          break;
+        case 0xBB: // OTDR
+          do {
+            var addr = this.hl();
+            var value = this.memio.rd(addr);
+            this.writePort(this.bc(), value);
+            this.HL((addr - 1) & 0xFFFF);
+            this.b = (this.b - 1) & 0xFF;
+            this.cycles += 21;
+          } while (this.b !== 0);
+          this.f = (this.f & ~(ZF|SF|NF)) | ZF | NF;
+          this.cycles += 5;
+          break;
+        default:
+          // Unsupported ED instruction
+          this.cycles += 4;
+          break;
+      }
+    }
+    break;
+
+  // DD prefix - IX register instructions
+  case 0x3DD: // DD prefix instructions
+    {
+      switch(i) {
+        case 0x21: // LD IX,nn
+          var value = this.next2();
+          this.ixh = (value >> 8) & 0xFF;
+          this.ixl = value & 0xFF;
+          this.cycles += 14;
+          break;
+        case 0x22: // LD (nn),IX
+          var addr = this.next2();
+          this.w2(addr, this.ix());
+          this.cycles += 20;
+          break;
+        case 0x23: // INC IX
+          var value = this.ix() + 1;
+          this.ixh = (value >> 8) & 0xFF;
+          this.ixl = value & 0xFF;
+          this.cycles += 10;
+          break;
+        case 0x24: // INC IXH
+          this.ixh = this.inc1(this.ixh);
+          this.cycles += 8;
+          break;
+        case 0x25: // DEC IXH
+          this.ixh = this.dec1(this.ixh);
+          this.cycles += 8;
+          break;
+        case 0x26: // LD IXH,n
+          this.ixh = this.next1();
+          this.cycles += 11;
+          break;
+        case 0x29: // ADD IX,IX
+          var result = this.ix() + this.ix();
+          this.ixh = (result >> 8) & 0xFF;
+          this.ixl = result & 0xFF;
+          this.f = (this.f & ~(CF|HF|NF)) | (result > 0xFFFF ? CF : 0) | HF;
+          this.cycles += 15;
+          break;
+        case 0x2A: // LD IX,(nn)
+          var addr = this.next2();
+          var value = this.r2(addr);
+          this.ixh = (value >> 8) & 0xFF;
+          this.ixl = value & 0xFF;
+          this.cycles += 20;
+          break;
+        case 0x2B: // DEC IX
+          var value = this.ix() - 1;
+          this.ixh = (value >> 8) & 0xFF;
+          this.ixl = value & 0xFF;
+          this.cycles += 10;
+          break;
+        case 0x2C: // INC IXL
+          this.ixl = this.inc1(this.ixl);
+          this.cycles += 8;
+          break;
+        case 0x2D: // DEC IXL
+          this.ixl = this.dec1(this.ixl);
+          this.cycles += 8;
+          break;
+        case 0x2E: // LD IXL,n
+          this.ixl = this.next1();
+          this.cycles += 11;
+          break;
+        case 0x34: // INC (IX+d)
+          var offset = this.next1s();
+          var addr = (this.ix() + offset) & 0xFFFF;
+          var value = this.memio.rd(addr);
+          value = this.inc1(value);
+          this.memio.wr(addr, value);
+          this.cycles += 23;
+          break;
+        case 0x35: // DEC (IX+d)
+          var offset = this.next1s();
+          var addr = (this.ix() + offset) & 0xFFFF;
+          var value = this.memio.rd(addr);
+          value = this.dec1(value);
+          this.memio.wr(addr, value);
+          this.cycles += 23;
+          break;
+        case 0x36: // LD (IX+d),n
+          var offset = this.next1s();
+          var value = this.next1();
+          var addr = (this.ix() + offset) & 0xFFFF;
+          this.memio.wr(addr, value);
+          this.cycles += 19;
+          break;
+        case 0x39: // ADD IX,SP
+          var result = this.ix() + this.sp;
+          this.ixh = (result >> 8) & 0xFF;
+          this.ixl = result & 0xFF;
+          this.f = (this.f & ~(CF|HF|NF)) | (result > 0xFFFF ? CF : 0) | HF;
+          this.cycles += 15;
+          break;
+        case 0x46: // LD B,(IX+d)
+          var offset = this.next1s();
+          var addr = (this.ix() + offset) & 0xFFFF;
+          this.b = this.memio.rd(addr);
+          this.cycles += 19;
+          break;
+        case 0x4E: // LD C,(IX+d)
+          var offset = this.next1s();
+          var addr = (this.ix() + offset) & 0xFFFF;
+          this.c = this.memio.rd(addr);
+          this.cycles += 19;
+          break;
+        case 0x56: // LD D,(IX+d)
+          var offset = this.next1s();
+          var addr = (this.ix() + offset) & 0xFFFF;
+          this.d = this.memio.rd(addr);
+          this.cycles += 19;
+          break;
+        case 0x5E: // LD E,(IX+d)
+          var offset = this.next1s();
+          var addr = (this.ix() + offset) & 0xFFFF;
+          this.e = this.memio.rd(addr);
+          this.cycles += 19;
+          break;
+        case 0x66: // LD H,(IX+d)
+          var offset = this.next1s();
+          var addr = (this.ix() + offset) & 0xFFFF;
+          this.h = this.memio.rd(addr);
+          this.cycles += 19;
+          break;
+        case 0x6E: // LD L,(IX+d)
+          var offset = this.next1s();
+          var addr = (this.ix() + offset) & 0xFFFF;
+          this.l = this.memio.rd(addr);
+          this.cycles += 19;
+          break;
+        case 0x70: // LD (IX+d),B
+          var offset = this.next1s();
+          var addr = (this.ix() + offset) & 0xFFFF;
+          this.memio.wr(addr, this.b);
+          this.cycles += 19;
+          break;
+        case 0x71: // LD (IX+d),C
+          var offset = this.next1s();
+          var addr = (this.ix() + offset) & 0xFFFF;
+          this.memio.wr(addr, this.c);
+          this.cycles += 19;
+          break;
+        case 0x72: // LD (IX+d),D
+          var offset = this.next1s();
+          var addr = (this.ix() + offset) & 0xFFFF;
+          this.memio.wr(addr, this.d);
+          this.cycles += 19;
+          break;
+        case 0x73: // LD (IX+d),E
+          var offset = this.next1s();
+          var addr = (this.ix() + offset) & 0xFFFF;
+          this.memio.wr(addr, this.e);
+          this.cycles += 19;
+          break;
+        case 0x74: // LD (IX+d),H
+          var offset = this.next1s();
+          var addr = (this.ix() + offset) & 0xFFFF;
+          this.memio.wr(addr, this.h);
+          this.cycles += 19;
+          break;
+        case 0x75: // LD (IX+d),L
+          var offset = this.next1s();
+          var addr = (this.ix() + offset) & 0xFFFF;
+          this.memio.wr(addr, this.l);
+          this.cycles += 19;
+          break;
+        case 0x77: // LD (IX+d),A
+          var offset = this.next1s();
+          var addr = (this.ix() + offset) & 0xFFFF;
+          this.memio.wr(addr, this.a);
+          this.cycles += 19;
+          break;
+        case 0x7E: // LD A,(IX+d)
+          var offset = this.next1s();
+          var addr = (this.ix() + offset) & 0xFFFF;
+          this.a = this.memio.rd(addr);
+          this.cycles += 19;
+          break;
+        case 0x86: // ADD A,(IX+d)
+          var offset = this.next1s();
+          var addr = (this.ix() + offset) & 0xFFFF;
+          var value = this.memio.rd(addr);
+          this.a = this.add1(this.a, value);
+          this.cycles += 19;
+          break;
+        case 0x8E: // ADC A,(IX+d)
+          var offset = this.next1s();
+          var addr = (this.ix() + offset) & 0xFFFF;
+          var value = this.memio.rd(addr);
+          this.a = this.adc1(this.a, value);
+          this.cycles += 19;
+          break;
+        case 0x96: // SUB (IX+d)
+          var offset = this.next1s();
+          var addr = (this.ix() + offset) & 0xFFFF;
+          var value = this.memio.rd(addr);
+          this.a = this.sub1(this.a, value);
+          this.cycles += 19;
+          break;
+        case 0x9E: // SBC A,(IX+d)
+          var offset = this.next1s();
+          var addr = (this.ix() + offset) & 0xFFFF;
+          var value = this.memio.rd(addr);
+          this.a = this.sbc1(this.a, value);
+          this.cycles += 19;
+          break;
+        case 0xA6: // AND (IX+d)
+          var offset = this.next1s();
+          var addr = (this.ix() + offset) & 0xFFFF;
+          var value = this.memio.rd(addr);
+          this.a = this.and1(this.a, value);
+          this.cycles += 19;
+          break;
+        case 0xAE: // XOR (IX+d)
+          var offset = this.next1s();
+          var addr = (this.ix() + offset) & 0xFFFF;
+          var value = this.memio.rd(addr);
+          this.a = this.xor1(this.a, value);
+          this.cycles += 19;
+          break;
+        case 0xB6: // OR (IX+d)
+          var offset = this.next1s();
+          var addr = (this.ix() + offset) & 0xFFFF;
+          var value = this.memio.rd(addr);
+          this.a = this.or1(this.a, value);
+          this.cycles += 19;
+          break;
+        case 0xBE: // CP (IX+d)
+          var offset = this.next1s();
+          var addr = (this.ix() + offset) & 0xFFFF;
+          var value = this.memio.rd(addr);
+          this.cp1(this.a, value);
+          this.cycles += 19;
+          break;
+        case 0xE1: // POP IX
+          var value = this.pop();
+          this.ixh = (value >> 8) & 0xFF;
+          this.ixl = value & 0xFF;
+          this.cycles += 14;
+          break;
+        case 0xE3: // EX (SP),IX
+          var temp = this.ix();
+          var sp_val = this.r2(this.sp);
+          this.w2(this.sp, temp);
+          this.ixh = (sp_val >> 8) & 0xFF;
+          this.ixl = sp_val & 0xFF;
+          this.cycles += 23;
+          break;
+        case 0xE5: // PUSH IX
+          this.push(this.ix());
+          this.cycles += 15;
+          break;
+        case 0xE9: // JP (IX)
+          this.pc = this.ix();
+          this.cycles += 8;
+          break;
+        case 0xF9: // LD SP,IX
+          this.sp = this.ix();
+          this.cycles += 10;
+          break;
+        default:
+          // Unsupported DD instruction
+          this.cycles += 4;
+          break;
+      }
+    }
+    break;
+
+  // FD prefix - IY register instructions (similar to DD but with IY)
+  case 0x4FD: // FD prefix instructions
+    {
+      switch(i) {
+        case 0x21: // LD IY,nn
+          var value = this.next2();
+          this.iyh = (value >> 8) & 0xFF;
+          this.iyl = value & 0xFF;
+          this.cycles += 14;
+          break;
+        case 0x22: // LD (nn),IY
+          var addr = this.next2();
+          this.w2(addr, this.iy());
+          this.cycles += 20;
+          break;
+        case 0x23: // INC IY
+          var value = this.iy() + 1;
+          this.iyh = (value >> 8) & 0xFF;
+          this.iyl = value & 0xFF;
+          this.cycles += 10;
+          break;
+        case 0x24: // INC IYH
+          this.iyh = this.inc1(this.iyh);
+          this.cycles += 8;
+          break;
+        case 0x25: // DEC IYH
+          this.iyh = this.dec1(this.iyh);
+          this.cycles += 8;
+          break;
+        case 0x26: // LD IYH,n
+          this.iyh = this.next1();
+          this.cycles += 11;
+          break;
+        case 0x29: // ADD IY,IY
+          var result = this.iy() + this.iy();
+          this.iyh = (result >> 8) & 0xFF;
+          this.iyl = result & 0xFF;
+          this.f = (this.f & ~(CF|HF|NF)) | (result > 0xFFFF ? CF : 0) | HF;
+          this.cycles += 15;
+          break;
+        case 0x2A: // LD IY,(nn)
+          var addr = this.next2();
+          var value = this.r2(addr);
+          this.iyh = (value >> 8) & 0xFF;
+          this.iyl = value & 0xFF;
+          this.cycles += 20;
+          break;
+        case 0x2B: // DEC IY
+          var value = this.iy() - 1;
+          this.iyh = (value >> 8) & 0xFF;
+          this.iyl = value & 0xFF;
+          this.cycles += 10;
+          break;
+        case 0x2C: // INC IYL
+          this.iyl = this.inc1(this.iyl);
+          this.cycles += 8;
+          break;
+        case 0x2D: // DEC IYL
+          this.iyl = this.dec1(this.iyl);
+          this.cycles += 8;
+          break;
+        case 0x2E: // LD IYL,n
+          this.iyl = this.next1();
+          this.cycles += 11;
+          break;
+        case 0x34: // INC (IY+d)
+          var offset = this.next1s();
+          var addr = (this.iy() + offset) & 0xFFFF;
+          var value = this.memio.rd(addr);
+          value = this.inc1(value);
+          this.memio.wr(addr, value);
+          this.cycles += 23;
+          break;
+        case 0x35: // DEC (IY+d)
+          var offset = this.next1s();
+          var addr = (this.iy() + offset) & 0xFFFF;
+          var value = this.memio.rd(addr);
+          value = this.dec1(value);
+          this.memio.wr(addr, value);
+          this.cycles += 23;
+          break;
+        case 0x36: // LD (IY+d),n
+          var offset = this.next1s();
+          var value = this.next1();
+          var addr = (this.iy() + offset) & 0xFFFF;
+          this.memio.wr(addr, value);
+          this.cycles += 19;
+          break;
+        case 0x39: // ADD IY,SP
+          var result = this.iy() + this.sp;
+          this.iyh = (result >> 8) & 0xFF;
+          this.iyl = result & 0xFF;
+          this.f = (this.f & ~(CF|HF|NF)) | (result > 0xFFFF ? CF : 0) | HF;
+          this.cycles += 15;
+          break;
+        case 0x46: // LD B,(IY+d)
+          var offset = this.next1s();
+          var addr = (this.iy() + offset) & 0xFFFF;
+          this.b = this.memio.rd(addr);
+          this.cycles += 19;
+          break;
+        case 0x4E: // LD C,(IY+d)
+          var offset = this.next1s();
+          var addr = (this.iy() + offset) & 0xFFFF;
+          this.c = this.memio.rd(addr);
+          this.cycles += 19;
+          break;
+        case 0x56: // LD D,(IY+d)
+          var offset = this.next1s();
+          var addr = (this.iy() + offset) & 0xFFFF;
+          this.d = this.memio.rd(addr);
+          this.cycles += 19;
+          break;
+        case 0x5E: // LD E,(IY+d)
+          var offset = this.next1s();
+          var addr = (this.iy() + offset) & 0xFFFF;
+          this.e = this.memio.rd(addr);
+          this.cycles += 19;
+          break;
+        case 0x66: // LD H,(IY+d)
+          var offset = this.next1s();
+          var addr = (this.iy() + offset) & 0xFFFF;
+          this.h = this.memio.rd(addr);
+          this.cycles += 19;
+          break;
+        case 0x6E: // LD L,(IY+d)
+          var offset = this.next1s();
+          var addr = (this.iy() + offset) & 0xFFFF;
+          this.l = this.memio.rd(addr);
+          this.cycles += 19;
+          break;
+        case 0x70: // LD (IY+d),B
+          var offset = this.next1s();
+          var addr = (this.iy() + offset) & 0xFFFF;
+          this.memio.wr(addr, this.b);
+          this.cycles += 19;
+          break;
+        case 0x71: // LD (IY+d),C
+          var offset = this.next1s();
+          var addr = (this.iy() + offset) & 0xFFFF;
+          this.memio.wr(addr, this.c);
+          this.cycles += 19;
+          break;
+        case 0x72: // LD (IY+d),D
+          var offset = this.next1s();
+          var addr = (this.iy() + offset) & 0xFFFF;
+          this.memio.wr(addr, this.d);
+          this.cycles += 19;
+          break;
+        case 0x73: // LD (IY+d),E
+          var offset = this.next1s();
+          var addr = (this.iy() + offset) & 0xFFFF;
+          this.memio.wr(addr, this.e);
+          this.cycles += 19;
+          break;
+        case 0x74: // LD (IY+d),H
+          var offset = this.next1s();
+          var addr = (this.iy() + offset) & 0xFFFF;
+          this.memio.wr(addr, this.h);
+          this.cycles += 19;
+          break;
+        case 0x75: // LD (IY+d),L
+          var offset = this.next1s();
+          var addr = (this.iy() + offset) & 0xFFFF;
+          this.memio.wr(addr, this.l);
+          this.cycles += 19;
+          break;
+        case 0x77: // LD (IY+d),A
+          var offset = this.next1s();
+          var addr = (this.iy() + offset) & 0xFFFF;
+          this.memio.wr(addr, this.a);
+          this.cycles += 19;
+          break;
+        case 0x7E: // LD A,(IY+d)
+          var offset = this.next1s();
+          var addr = (this.iy() + offset) & 0xFFFF;
+          this.a = this.memio.rd(addr);
+          this.cycles += 19;
+          break;
+        case 0x86: // ADD A,(IY+d)
+          var offset = this.next1s();
+          var addr = (this.iy() + offset) & 0xFFFF;
+          var value = this.memio.rd(addr);
+          this.a = this.add1(this.a, value);
+          this.cycles += 19;
+          break;
+        case 0x8E: // ADC A,(IY+d)
+          var offset = this.next1s();
+          var addr = (this.iy() + offset) & 0xFFFF;
+          var value = this.memio.rd(addr);
+          this.a = this.adc1(this.a, value);
+          this.cycles += 19;
+          break;
+        case 0x96: // SUB (IY+d)
+          var offset = this.next1s();
+          var addr = (this.iy() + offset) & 0xFFFF;
+          var value = this.memio.rd(addr);
+          this.a = this.sub1(this.a, value);
+          this.cycles += 19;
+          break;
+        case 0x9E: // SBC A,(IY+d)
+          var offset = this.next1s();
+          var addr = (this.iy() + offset) & 0xFFFF;
+          var value = this.memio.rd(addr);
+          this.a = this.sbc1(this.a, value);
+          this.cycles += 19;
+          break;
+        case 0xA6: // AND (IY+d)
+          var offset = this.next1s();
+          var addr = (this.iy() + offset) & 0xFFFF;
+          var value = this.memio.rd(addr);
+          this.a = this.and1(this.a, value);
+          this.cycles += 19;
+          break;
+        case 0xAE: // XOR (IY+d)
+          var offset = this.next1s();
+          var addr = (this.iy() + offset) & 0xFFFF;
+          var value = this.memio.rd(addr);
+          this.a = this.xor1(this.a, value);
+          this.cycles += 19;
+          break;
+        case 0xB6: // OR (IY+d)
+          var offset = this.next1s();
+          var addr = (this.iy() + offset) & 0xFFFF;
+          var value = this.memio.rd(addr);
+          this.a = this.or1(this.a, value);
+          this.cycles += 19;
+          break;
+        case 0xBE: // CP (IY+d)
+          var offset = this.next1s();
+          var addr = (this.iy() + offset) & 0xFFFF;
+          var value = this.memio.rd(addr);
+          this.cp1(this.a, value);
+          this.cycles += 19;
+          break;
+        case 0xE1: // POP IY
+          var value = this.pop();
+          this.iyh = (value >> 8) & 0xFF;
+          this.iyl = value & 0xFF;
+          this.cycles += 14;
+          break;
+        case 0xE3: // EX (SP),IY
+          var temp = this.iy();
+          var sp_val = this.r2(this.sp);
+          this.w2(this.sp, temp);
+          this.iyh = (sp_val >> 8) & 0xFF;
+          this.iyl = sp_val & 0xFF;
+          this.cycles += 23;
+          break;
+        case 0xE5: // PUSH IY
+          this.push(this.iy());
+          this.cycles += 15;
+          break;
+        case 0xE9: // JP (IY)
+          this.pc = this.iy();
+          this.cycles += 8;
+          break;
+        case 0xF9: // LD SP,IY
+          this.sp = this.iy();
+          this.cycles += 10;
+          break;
+        default:
+          // Unsupported FD instruction
+          this.cycles += 4;
+          break;
+      }
+    }
+    break;
+
   case 0x0FE: this.sub1(this.a, this.next1()); this.cycles += 7; break; // CP n
   case 0x0FF: this.push(this.pc); this.pc=0x38; this.cycles+=11; break; // RST  38H
 
@@ -1427,7 +2751,7 @@ Cpu.prototype.execute = function(i) {
               this.cycles += 4;
               this.prefix=0; return false; // stop execution
   }
-  this.prefix= next;
+  // Don't set prefix here - it will be reset in step()
   return true; // go-on
 };
 
@@ -1435,8 +2759,15 @@ Cpu.prototype.execute = function(i) {
 //   just for the case of memory mapped IO, not to trigger IO!
 Cpu.prototype.disassembleInstruction = function(addr) {
   var i = this.ram[addr];
+  var prefix = 0;
 
-  switch(i) {
+  // Check for prefix bytes
+  if (i === 0xCB || i === 0xED || i === 0xDD || i === 0xFD) {
+    prefix = i;
+    i = this.ram[addr + 1];
+  }
+
+  switch(prefix + i) {
   case 0x00:
     {
       // NOP
