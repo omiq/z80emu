@@ -1651,8 +1651,8 @@ VT100.prototype.putString = function(x, y, text, color, style) {
   // Calculate the actual cursor position relative to the visible terminal
   this.cursorY                      = yIdx - this.numScrollbackLines;
   // Ensure cursor stays within the visible terminal area
-  if (this.cursorY >= this.terminalHeight - 1) {
-    this.cursorY = this.terminalHeight - 2;
+  if (this.cursorY >= this.terminalHeight) {
+    this.cursorY = this.terminalHeight - 1;
   }
   if (this.cursorY < 0) {
     this.cursorY = 0;
@@ -2979,10 +2979,10 @@ VT100.prototype.lf = function(count) {
   while (count-- > 0) {
     if (this.cursorY >= this.terminalHeight - 1) {
       // Scroll the entire screen up when we reach the bottom
-      // Use a more direct scrolling approach to avoid extra line feeds
+      // Use a simple approach to avoid extra blank lines
       var console = this.console[this.currentScreen];
-      if (console.childNodes.length > this.terminalHeight) {
-        // Remove the top line to make room
+      // Remove the top line to make room
+      if (console.firstChild) {
         console.removeChild(console.firstChild);
       }
       // Keep cursor at the bottom
@@ -2991,10 +2991,10 @@ VT100.prototype.lf = function(count) {
       // Just update cursor position without calling putString
       this.cursorY = this.cursorY + 1;
     }
-          // Update cursor visual position using unified positioning logic
-      // Position cursor at the correct line with padding offset and baseline alignment
-      this.cursor.style.top = (this.cursorY * 20 + 20) + 'px'; // Fixed pixel dimensions: 20px per row + 20px padding
-      this.cursor.style.left = (this.cursorX * 8 + 20) + 'px'; // Fixed pixel dimensions: 8px per column + 20px padding
+    // Update cursor visual position using unified positioning logic
+    // Position cursor at the correct line with padding offset and baseline alignment
+    this.cursor.style.top = (this.cursorY * 20 + 20) + 'px'; // Fixed pixel dimensions: 20px per row + 20px padding
+    this.cursor.style.left = (this.cursorX * 8 + 20) + 'px'; // Fixed pixel dimensions: 8px per column + 20px padding
   }
   window.console.log('LF finished: cursorY=' + this.cursorY);
   this.needWrap = false; // Reset wrap flag after line feed
