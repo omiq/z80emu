@@ -191,10 +191,13 @@ function VT100(container) {
   setInterval(function(vt100) {
     return function() {
       if (vt100.cursor.style.visibility != 'hidden') {
+        window.console.log('Blinking: current className = "' + vt100.cursor.className + '"');
         if (vt100.cursor.className.indexOf('bright') >= 0) {
           vt100.cursor.className = 'dim';
+          window.console.log('Blinking: set to dim');
         } else {
           vt100.cursor.className = 'bright';
+          window.console.log('Blinking: set to bright');
         }
       }
     };
@@ -207,7 +210,7 @@ function VT100(container) {
       if (vt100.cursor.style.visibility != 'hidden') {
         var visibleY = vt100.cursorY;
         // Position cursor at the correct line with padding offset and baseline alignment
-        vt100.cursor.style.top = (visibleY*vt100.cursorHeight + 20 - 2) + 'px';
+        vt100.cursor.style.top = (visibleY*vt100.cursorHeight + 20 + 23) + 'px';
       }
     };
   }(this);
@@ -314,7 +317,7 @@ VT100.prototype.reset = function(clearHistory) {
 
   this.enableAlternateScreen(false);
   this.gotoXY(0, this.terminalHeight - 1); // Start at bottom like traditional terminal
-  this.cursor.className = 'bright'; // Ensure cursor starts bright
+  this.cursor.className = 'bright'; // Initialize cursor to bright state
   this.showCursor();
   this.isInverted                       = false;
   this.refreshInvertedState();
@@ -1807,7 +1810,6 @@ VT100.prototype.hideCursor = function() {
   var hidden = this.cursor.style.visibility == 'hidden';
   if (!hidden) {
     this.cursor.style.visibility = 'hidden';
-    this.cursor.className = 'dim'; // Set cursor to dim state
     return true;
   }
   return false;
@@ -1816,7 +1818,6 @@ VT100.prototype.hideCursor = function() {
 VT100.prototype.showCursor = function(x, y) {
   if (this.cursor.style.visibility == 'hidden') {
     this.cursor.style.visibility = '';
-    this.cursor.className = 'bright'; // Ensure cursor is visible
     // Update cursor position without calling putString
     if (x !== undefined || y !== undefined) {
       var newX = x !== undefined ? x : this.cursorX;
@@ -2840,14 +2841,15 @@ VT100.prototype.animateCursor = function(inactive) {
         }
       }(this), 500);
   }
-  if (inactive != undefined || this.cursor.className != 'inactive') {
-    if (inactive) {
-      this.cursor.className = 'inactive';
-    } else {
-      this.cursor.className = this.cursor.className == 'bright'
-                              ? 'dim' : 'bright';
-    }
-  }
+  // Disabled animateCursor interference with blinking mechanism
+  // if (inactive != undefined || this.cursor.className != 'inactive') {
+  //   if (inactive) {
+  //     this.cursor.className = 'inactive';
+  //   } else {
+  //     this.cursor.className = this.cursor.className == 'bright'
+  //                             ? 'dim' : 'bright';
+  //   }
+  // }
 };
 
 VT100.prototype.blurCursor = function() {
@@ -2886,7 +2888,17 @@ VT100.prototype.beep = function() {
 
 VT100.prototype.bs = function() {
   if (this.cursorX > 0) {
+    // Hide cursor during backspace to avoid visual positioning issues
+    this.cursor.style.visibility = 'hidden';
+    
+    // Clear the character at the position we're moving back to
+    this.putString(this.cursorX - 1, this.cursorY, ' ', this.color, this.style);
+    // Move cursor back
     this.gotoXY(this.cursorX - 1, this.cursorY);
+    
+    // Ensure cursor is visible after backspace (blinking will be handled by setInterval)
+    this.cursor.style.visibility = '';
+    
     this.needWrap = false;
   }
 };
@@ -2957,6 +2969,7 @@ VT100.prototype.cr = function() {
 };
 
 VT100.prototype.lf = function(count) {
+  window.console.log('LF called: count=' + count + ', cursorY=' + this.cursorY);
   if (count == undefined) {
     count    = 1;
   } else {
@@ -2982,11 +2995,12 @@ VT100.prototype.lf = function(count) {
       // Just update cursor position without calling putString
       this.cursorY = this.cursorY + 1;
     }
-          // Update cursor visual position
+          // Update cursor visual position using unified positioning logic
       // Position cursor at the correct line with padding offset and baseline alignment
-      this.cursor.style.top = (this.cursorY*this.cursorHeight + 20 - 2) + 'px';
+      this.cursor.style.top = (this.cursorY*this.cursorHeight + 20 + 23) + 'px';
       this.cursor.style.left = (this.cursorX*this.cursorWidth + 20) + 'px';
   }
+  window.console.log('LF finished: cursorY=' + this.cursorY);
   this.needWrap = false; // Reset wrap flag after line feed
 };
 
