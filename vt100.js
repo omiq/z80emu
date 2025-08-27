@@ -256,11 +256,8 @@ function VT100(container) {
   // Add function to manually position cursor for testing
   window.setCursorPosition = function(x, y) {
     console.log('Setting cursor position to:', x, y);
-    this.cursorX = x;
-    this.cursorY = y;
-    // Position cursor with correct offset for padding and baseline alignment
-    this.cursor.style.top = (y * this.cursorHeight + 20 - 2) + 'px';
-    this.cursor.style.left = (x * this.cursorWidth + 20) + 'px';
+    // Use gotoXY to test the actual code path used during normal operation
+    this.gotoXY(x, y);
     console.log('Cursor positioned at:', this.cursor.style.top, this.cursor.style.left);
   }.bind(this);
   
@@ -1664,8 +1661,8 @@ VT100.prototype.putString = function(x, y, text, color, style) {
   var scrollableTop = this.scrollable.offsetTop;
   var scrollableLeft = this.scrollable.offsetLeft;
   // Position cursor at the correct line with padding offset and baseline alignment
-  // Add 18px to move cursor down one row (18px = one line height)
-  var calculatedTop = (visibleY*this.cursorHeight + 20 - 2 + 18);
+  // Add 23px to move cursor down one row plus 5px additional adjustment (18px + 5px = 23px)
+  var calculatedTop = (visibleY*this.cursorHeight + 20 + 23);
   window.console.log('putString: using unified positioning, visibleY=' + visibleY + ', setting top to ' + calculatedTop + 'px');
   this.cursor.style.top = calculatedTop + 'px';
   // Also ensure cursor X position is relative to scrollable container
@@ -1811,10 +1808,11 @@ VT100.prototype.showCursor = function(x, y) {
       var newY = y !== undefined ? y : this.cursorY;
       this.cursorX = newX;
       this.cursorY = newY;
-      // Update visual position
-      // Position cursor at the correct line with padding offset and baseline alignment
-      this.cursor.style.top = (this.cursorY*this.cursorHeight + 20 - 2) + 'px';
-      this.cursor.style.left = (this.cursorX*this.cursorWidth + 20) + 'px';
+          // Update visual position using the same unified positioning logic as putString
+    // Position cursor at the correct line with padding offset and baseline alignment
+    this.cursor.style.top = (this.cursorY*this.cursorHeight + 20 + 23) + 'px';
+    // Use the same X positioning logic as putString when pixelX < 0
+    this.cursor.style.left = (this.cursorX*this.cursorWidth + 20) + 'px';
     }
     return true;
   }
@@ -2874,7 +2872,16 @@ VT100.prototype.beep = function() {
 VT100.prototype.bs = function() {
   if (this.cursorX > 0) {
     window.console.log('Backspace: moving from cursorX=' + this.cursorX + ' to ' + (this.cursorX - 1) + ', cursorY=' + this.cursorY);
+    // Clear the character at the position we're moving back to
+    this.putString(this.cursorX - 1, this.cursorY, ' ', this.color, this.style);
+    // Move cursor back using gotoXY
     this.gotoXY(this.cursorX - 1, this.cursorY);
+    // Ensure cursor visual position uses our unified positioning logic
+    this.cursor.style.top = (this.cursorY*this.cursorHeight + 20 + 23) + 'px';
+    // Use character width (0.6em) instead of cursor width (1em) for consistent positioning
+    // Calculate character width: cursorWidth is 1em, so character width is cursorWidth * 0.6
+    var charWidth = this.cursorWidth * 0.6;
+    this.cursor.style.left = (this.cursorX * charWidth) + 20 + 'px';
     this.needWrap = false;
   }
 };
