@@ -191,13 +191,13 @@ function VT100(container) {
   setInterval(function(vt100) {
     return function() {
       if (vt100.cursor.style.visibility != 'hidden') {
-        window.console.log('Blinking: current className = "' + vt100.cursor.className + '"');
+       // window.console.log('Blinking: current className = "' + vt100.cursor.className + '"');
         if (vt100.cursor.className.indexOf('bright') >= 0) {
           vt100.cursor.className = 'dim';
-          window.console.log('Blinking: set to dim');
+        //  window.console.log('Blinking: set to dim');
         } else {
           vt100.cursor.className = 'bright';
-          window.console.log('Blinking: set to bright');
+         // window.console.log('Blinking: set to bright');
         }
       }
     };
@@ -210,7 +210,7 @@ function VT100(container) {
       if (vt100.cursor.style.visibility != 'hidden') {
         var visibleY = vt100.cursorY;
         // Position cursor at the correct line with padding offset and baseline alignment
-        vt100.cursor.style.top = (visibleY*vt100.cursorHeight + 20 + 23) + 'px';
+        vt100.cursor.style.top = (visibleY * 20 + 20) + 'px'; // Fixed pixel dimensions: 20px per row + 20px padding
       }
     };
   }(this);
@@ -316,7 +316,7 @@ VT100.prototype.reset = function(clearHistory) {
   }
 
   this.enableAlternateScreen(false);
-  this.gotoXY(0, this.terminalHeight - 1); // Start at bottom like traditional terminal
+  this.gotoXY(0, 0); // Start at top row for proper scrolling behavior
   this.cursor.className = 'bright'; // Initialize cursor to bright state
   this.showCursor();
   this.isInverted                       = false;
@@ -767,10 +767,9 @@ VT100.prototype.initializeElements = function(container) {
 
   // Remember the dimensions of a standard character glyph. We would
   // expect that we could just check cursor.clientWidth/Height at any time,
-  // but it turns out that browsers sometimes invalidate these values
-  // (e.g. while displaying a print preview screen).
-  this.cursorWidth             = this.cursor.clientWidth;
-  this.cursorHeight            = this.lineheight.clientHeight;
+  // Fixed pixel dimensions for consistent positioning
+  this.cursorWidth             = 8;  // Fixed character width in pixels
+  this.cursorHeight            = 20; // Fixed character height in pixels
 
   // IE has a slightly different boxing model, that we need to compensate for
   this.isIE                    = ieProbe.offsetTop > 1;
@@ -984,8 +983,8 @@ VT100.prototype.resizer = function() {
   // still get confused if somebody enters a character that is wider/narrower
   // than normal. This can happen if the browser tries to substitute a
   // characters from a different font.
-  this.cursor.style.width      = this.cursorWidth  + 'px';
-  this.cursor.style.height     = this.cursorHeight + 'px';
+  this.cursor.style.width      = '8px';   // Fixed character width
+  this.cursor.style.height     = '20px';  // Fixed character height
 
   // Adjust height for one pixel padding of the #vt100 element.
   // The latter is necessary to properly display the inactive cursor.
@@ -1337,7 +1336,7 @@ VT100.prototype.insertBlankLine = function(y, color, style) {
     this.setTextContent(span, this.spaces(this.terminalWidth));
     line.appendChild(span);
   }
-  line.style.height      = this.cursorHeight + 'px';
+  line.style.height      = '20px'; // Fixed character height
   var console            = this.console[this.currentScreen];
   if (console.childNodes.length > y) {
     console.insertBefore(line, console.childNodes[y]);
@@ -1426,7 +1425,7 @@ VT100.prototype.truncateLines = function(width) {
           } else {
             // Remove entire line (i.e. <div>), if empty
             var blank = document.createElement('pre');
-            blank.style.height = this.cursorHeight + 'px';
+            blank.style.height = '20px'; // Fixed character height
             this.setTextContent(blank, '\n');
             line.parentNode.replaceChild(blank, line);
           }
@@ -1473,7 +1472,7 @@ VT100.prototype.putString = function(x, y, text, color, style) {
     // If necessary, promote blank '\n' line to a <div> tag
     if (line.tagName != 'DIV') {
       var div                       = document.createElement('div');
-      div.style.height              = this.cursorHeight + 'px';
+      div.style.height              = '20px'; // Fixed character height
       div.innerHTML                 = '<span></span>';
       console.replaceChild(div, line);
       line                          = div;
@@ -1664,14 +1663,14 @@ VT100.prototype.putString = function(x, y, text, color, style) {
   var scrollableTop = this.scrollable.offsetTop;
   var scrollableLeft = this.scrollable.offsetLeft;
   // Position cursor at the correct line with padding offset and baseline alignment
-  // Add 23px to move cursor down one row plus 5px additional adjustment (18px + 5px = 23px)
-  var calculatedTop = (visibleY*this.cursorHeight + 20 + 23);
+  // Fixed pixel dimensions: 20px per row + 20px padding
+  var calculatedTop = (visibleY * 20 + 20);
   window.console.log('putString: using unified positioning, visibleY=' + visibleY + ', setting top to ' + calculatedTop + 'px');
   this.cursor.style.top = calculatedTop + 'px';
-  // Also ensure cursor X position is relative to scrollable container
-  if (pixelX < 0) {
-    this.cursor.style.left = (this.cursorX*this.cursorWidth + 20) + 'px';
-  }
+              // Also ensure cursor X position is relative to scrollable container
+            if (pixelX < 0) {
+              this.cursor.style.left = (this.cursorX * 8 + 20) + 'px'; // 8px per column + 20px padding
+            }
   
   // Log final cursor position
   window.console.log('putString: final cursor position - top: ' + this.cursor.style.top + ', left: ' + this.cursor.style.left);
@@ -1712,7 +1711,7 @@ VT100.prototype.putString = function(x, y, text, color, style) {
         } else {
           // Remove entire line (i.e. <div>), if empty
           var blank                 = document.createElement('pre');
-          blank.style.height        = this.cursorHeight + 'px';
+          blank.style.height        = '20px'; // Fixed character height
           this.setTextContent(blank, '\n');
           line.parentNode.replaceChild(blank, line);
         }
@@ -1747,16 +1746,13 @@ VT100.prototype.gotoXY = function(x, y) {
   this.cursorX = x;
   this.cursorY = y;
   
-  // Use unified positioning logic instead of putString for cursor positioning
-  var visibleY = this.cursorY;
-  var calculatedTop = (visibleY*this.cursorHeight + 20 + 23);
-  this.cursor.style.top = calculatedTop + 'px';
-  
-  // Calculate actual character width from terminal dimensions
-  // Terminal width is calc(80 * 0.6em + 40px), so character width is (scrollable width - 40px) / 80
-  var terminalContentWidth = this.scrollable.offsetWidth - 40; // Subtract padding
-  var charWidth = terminalContentWidth / 80; // Divide by 80 columns
-  this.cursor.style.left = (this.cursorX * charWidth + 20) + 'px';
+                // Use unified positioning logic instead of putString for cursor positioning
+              var visibleY = this.cursorY;
+              var calculatedTop = (visibleY * 20 + 20); // Fixed pixel dimensions: 20px per row + 20px padding
+              this.cursor.style.top = calculatedTop + 'px';
+              
+              // Fixed pixel dimensions: 6px per column + 20px padding
+              this.cursor.style.left = (this.cursorX * 8 + 20) + 'px';
   
   this.needWrap = false;
 };
@@ -1826,9 +1822,9 @@ VT100.prototype.showCursor = function(x, y) {
       this.cursorY = newY;
           // Update visual position using the same unified positioning logic as putString
     // Position cursor at the correct line with padding offset and baseline alignment
-    this.cursor.style.top = (this.cursorY*this.cursorHeight + 20 + 23) + 'px';
+    this.cursor.style.top = (this.cursorY * 20 + 20) + 'px'; // Fixed pixel dimensions: 20px per row + 20px padding
     // Use the same X positioning logic as putString when pixelX < 0
-    this.cursor.style.left = (this.cursorX*this.cursorWidth + 20) + 'px';
+    this.cursor.style.left = (this.cursorX * 8 + 20) + 'px'; // Fixed pixel dimensions: 8px per column + 20px padding
     }
     return true;
   }
@@ -2404,7 +2400,7 @@ VT100.prototype.handleKey = function(event) {
     }
     if (ch == undefined) {
       switch (key) {
-      case   8: /* Backspace    */ ch = '\u007f';                       break;
+      case   8: /* Backspace    */ ch = '\u0008';                       break;
       case   9: /* Tab          */ ch = '\u0009';                       break;
       case  10: /* Return       */ ch = '\u000A';                       break;
       case  13: /* Enter        */ ch = this.crLfMode ?
@@ -2888,16 +2884,16 @@ VT100.prototype.beep = function() {
 
 VT100.prototype.bs = function() {
   if (this.cursorX > 0) {
-    // Hide cursor during backspace to avoid visual positioning issues
-    this.cursor.style.visibility = 'hidden';
+    window.console.log('Backspace: starting at cursorX=' + this.cursorX + ', cursorY=' + this.cursorY);
     
-    // Clear the character at the position we're moving back to
-    this.putString(this.cursorX - 1, this.cursorY, ' ', this.color, this.style);
-    // Move cursor back
+    // Move cursor back one position first
     this.gotoXY(this.cursorX - 1, this.cursorY);
+    this.cursor.style.left = '-1000px';
+    // Clear the character at the new cursor position without advancing cursor
+    //this.clearRegion(this.cursorX, this.cursorY, 1, 1, this.color, this.style);
     
-    // Ensure cursor is visible after backspace (blinking will be handled by setInterval)
-    this.cursor.style.visibility = '';
+    window.console.log('Backspace: finished at cursorX=' + this.cursorX + ', cursorY=' + this.cursorY);
+    window.console.log('Backspace: cursor position left: ' + this.cursor.style.left);
     
     this.needWrap = false;
   }
@@ -2997,8 +2993,8 @@ VT100.prototype.lf = function(count) {
     }
           // Update cursor visual position using unified positioning logic
       // Position cursor at the correct line with padding offset and baseline alignment
-      this.cursor.style.top = (this.cursorY*this.cursorHeight + 20 + 23) + 'px';
-      this.cursor.style.left = (this.cursorX*this.cursorWidth + 20) + 'px';
+      this.cursor.style.top = (this.cursorY * 20 + 20) + 'px'; // Fixed pixel dimensions: 20px per row + 20px padding
+      this.cursor.style.left = (this.cursorX * 8 + 20) + 'px'; // Fixed pixel dimensions: 8px per column + 20px padding
   }
   window.console.log('LF finished: cursorY=' + this.cursorY);
   this.needWrap = false; // Reset wrap flag after line feed

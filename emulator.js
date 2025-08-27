@@ -321,7 +321,7 @@ Emulator.prototype.doReadLine = function() {
           this.vt100(' ');
           this.gotoXY(x, y);
         } else {
-          this.vt100('\u0008 \u0008');
+          this.vt100('\u0008');
         }
       } else {
         this.vt100('\u0007');

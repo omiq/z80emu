@@ -56,10 +56,10 @@ html, body {
   position:         relative;
   padding:          20px;     /* Consistent padding */
   margin-bottom:    20px;     /* Reduced margin for fixed terminal */
-  height:           calc(24 * 1.2em + 40px); /* Fixed height for 24 rows */
-  width:            calc(80 * 0.6em + 40px); /* Fixed width for 80 columns */
-  max-width:        calc(80 * 0.6em + 40px); /* Prevent expansion */
-  max-height:       calc(24 * 1.2em + 40px); /* Prevent expansion */
+  height:           528px;    /* Fixed height: 24 rows * 20px + 40px padding */
+  width:            680px;    /* Fixed width: 80 columns * 8px + 40px padding */
+  max-width:        680px;    /* Prevent expansion */
+  max-height:       528px;    /* Prevent expansion */
 }
 
 /* VT52 Font Definition */
@@ -85,8 +85,8 @@ html, body {
   top:              0px;
   overflow:         hidden;
   z-index:          1;
-  width:            1em;      /* Make cursor a square */
-  height:           1em;      /* Match character height instead of line height */
+  width:            8px;      /* Fixed character width */
+  height:           20px;     /* Fixed character height */
   background-color: #00ff00;  /* Default green background */
   color:            #000000;  /* Black text for contrast */
 }
