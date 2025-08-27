@@ -2886,12 +2886,6 @@ VT100.prototype.beep = function() {
 
 VT100.prototype.bs = function() {
   if (this.cursorX > 0) {
-    window.console.log('Backspace: moving from cursorX=' + this.cursorX + ' to ' + (this.cursorX - 1) + ', cursorY=' + this.cursorY);
-    // Hide cursor during backspace to avoid visual positioning issues
-    this.hideCursor();
-    // Clear the character at the position we're moving back to
-    this.putString(this.cursorX - 1, this.cursorY, ' ', this.color, this.style);
-    // Move cursor back
     this.gotoXY(this.cursorX - 1, this.cursorY);
     this.needWrap = false;
   }
@@ -3878,6 +3872,10 @@ VT100.prototype.renderString = function(s, showCursor) {
   if (showCursor) {
     // Minimize the number of calls to putString(), by avoiding a direct
     // call to this.showCursor()
+    this.cursor.style.visibility = '';
+  }
+  // Always show cursor when rendering text (to restore cursor after backspace)
+  if (s.length > 0) {
     this.cursor.style.visibility = '';
   }
   // Write text at current cursor position
