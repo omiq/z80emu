@@ -1658,24 +1658,23 @@ VT100.prototype.putString = function(x, y, text, color, style) {
   if (this.cursorY < 0) {
     this.cursorY = 0;
   }
-  if (pixelY >= 0) {
-    // Apply baseline alignment to pixelY positioning as well
-    window.console.log('putString: using pixelY path, pixelY=' + pixelY + ', setting top to ' + (pixelY - 2) + 'px');
-    this.cursor.style.top           = (pixelY - 2) + 'px';
-  } else {
-    // Position cursor based on the actual visible position, not the absolute position
-    var visibleY = this.cursorY;
-    // Calculate cursor position relative to the scrollable container
-    var scrollableTop = this.scrollable.offsetTop;
-    var scrollableLeft = this.scrollable.offsetLeft;
-    // Position cursor at the correct line with padding offset and baseline alignment
-    window.console.log('putString: using visibleY path, visibleY=' + visibleY + ', setting top to ' + (visibleY*this.cursorHeight + 20 - 2) + 'px');
-    this.cursor.style.top           = (visibleY*this.cursorHeight + 20 - 2) + 'px';
-    // Also ensure cursor X position is relative to scrollable container
-    if (pixelX < 0) {
-      this.cursor.style.left        = (this.cursorX*this.cursorWidth + 20) + 'px';
-    }
+  // Always use the same positioning logic regardless of pixelY value
+  var visibleY = this.cursorY;
+  // Calculate cursor position relative to the scrollable container
+  var scrollableTop = this.scrollable.offsetTop;
+  var scrollableLeft = this.scrollable.offsetLeft;
+  // Position cursor at the correct line with padding offset and baseline alignment
+  // Add 18px to move cursor down one row (18px = one line height)
+  var calculatedTop = (visibleY*this.cursorHeight + 20 - 2 + 18);
+  window.console.log('putString: using unified positioning, visibleY=' + visibleY + ', setting top to ' + calculatedTop + 'px');
+  this.cursor.style.top = calculatedTop + 'px';
+  // Also ensure cursor X position is relative to scrollable container
+  if (pixelX < 0) {
+    this.cursor.style.left = (this.cursorX*this.cursorWidth + 20) + 'px';
   }
+  
+  // Log final cursor position
+  window.console.log('putString: final cursor position - top: ' + this.cursor.style.top + ', left: ' + this.cursor.style.left);
 
   if (text.length) {
     // Merge <span> with previous sibling, if styles are identical
@@ -3864,6 +3863,7 @@ VT100.prototype.renderString = function(s, showCursor) {
     this.cursor.style.visibility = '';
   }
   // Write text at current cursor position
+  window.console.log('renderString: calling putString with cursorX=' + this.cursorX + ', cursorY=' + this.cursorY + ', text="' + s + '"');
   this.putString(this.cursorX, this.cursorY, s, this.color, this.style);
 };
 
