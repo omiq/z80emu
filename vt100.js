@@ -1739,7 +1739,22 @@ VT100.prototype.gotoXY = function(x, y) {
   if (y < minY) {
     y           = minY;
   }
-  this.putString(x, y, '', undefined);
+  
+  // Update cursor position
+  this.cursorX = x;
+  this.cursorY = y;
+  
+  // Use unified positioning logic instead of putString for cursor positioning
+  var visibleY = this.cursorY;
+  var calculatedTop = (visibleY*this.cursorHeight + 20 + 23);
+  this.cursor.style.top = calculatedTop + 'px';
+  
+  // Calculate actual character width from terminal dimensions
+  // Terminal width is calc(80 * 0.6em + 40px), so character width is (scrollable width - 40px) / 80
+  var terminalContentWidth = this.scrollable.offsetWidth - 40; // Subtract padding
+  var charWidth = terminalContentWidth / 80; // Divide by 80 columns
+  this.cursor.style.left = (this.cursorX * charWidth + 20) + 'px';
+  
   this.needWrap = false;
 };
 
@@ -2872,16 +2887,12 @@ VT100.prototype.beep = function() {
 VT100.prototype.bs = function() {
   if (this.cursorX > 0) {
     window.console.log('Backspace: moving from cursorX=' + this.cursorX + ' to ' + (this.cursorX - 1) + ', cursorY=' + this.cursorY);
+    // Hide cursor during backspace to avoid visual positioning issues
+    this.hideCursor();
     // Clear the character at the position we're moving back to
     this.putString(this.cursorX - 1, this.cursorY, ' ', this.color, this.style);
-    // Move cursor back using gotoXY
+    // Move cursor back
     this.gotoXY(this.cursorX - 1, this.cursorY);
-    // Ensure cursor visual position uses our unified positioning logic
-    this.cursor.style.top = (this.cursorY*this.cursorHeight + 20 + 23) + 'px';
-    // Use character width (0.6em) instead of cursor width (1em) for consistent positioning
-    // Calculate character width: cursorWidth is 1em, so character width is cursorWidth * 0.6
-    var charWidth = this.cursorWidth * 0.6;
-    this.cursor.style.left = (this.cursorX * charWidth) + 20 + 'px';
     this.needWrap = false;
   }
 };
