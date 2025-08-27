@@ -1660,6 +1660,7 @@ VT100.prototype.putString = function(x, y, text, color, style) {
   }
   if (pixelY >= 0) {
     // Apply baseline alignment to pixelY positioning as well
+    window.console.log('putString: using pixelY path, pixelY=' + pixelY + ', setting top to ' + (pixelY - 2) + 'px');
     this.cursor.style.top           = (pixelY - 2) + 'px';
   } else {
     // Position cursor based on the actual visible position, not the absolute position
@@ -1668,6 +1669,7 @@ VT100.prototype.putString = function(x, y, text, color, style) {
     var scrollableTop = this.scrollable.offsetTop;
     var scrollableLeft = this.scrollable.offsetLeft;
     // Position cursor at the correct line with padding offset and baseline alignment
+    window.console.log('putString: using visibleY path, visibleY=' + visibleY + ', setting top to ' + (visibleY*this.cursorHeight + 20 - 2) + 'px');
     this.cursor.style.top           = (visibleY*this.cursorHeight + 20 - 2) + 'px';
     // Also ensure cursor X position is relative to scrollable container
     if (pixelX < 0) {
@@ -2872,7 +2874,7 @@ VT100.prototype.beep = function() {
 
 VT100.prototype.bs = function() {
   if (this.cursorX > 0) {
-    console.log('Backspace: moving from cursorX=' + this.cursorX + ' to ' + (this.cursorX - 1) + ', cursorY=' + this.cursorY);
+    window.console.log('Backspace: moving from cursorX=' + this.cursorX + ' to ' + (this.cursorX - 1) + ', cursorY=' + this.cursorY);
     this.gotoXY(this.cursorX - 1, this.cursorY);
     this.needWrap = false;
   }
