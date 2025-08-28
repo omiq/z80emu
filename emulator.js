@@ -1008,13 +1008,30 @@ Emulator.prototype.openDiskMountWindow = function (typ, name, content) {
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">\
 <html xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xml:lang="en" lang="en">\
   <head>\
-    <title>Zilog Z80 CPU Emulator</title>\
+    <title>CP/M Emulator Drive Manager</title>\
     <link rel="shortcut icon" href="favicon.ico" type="image/x-icon">\
     <style type="text/css">\
-      body, pre, input, textarea { font-family: "DejaVu Sans Mono", "Everson Mono", FreeMono, "Andale Mono", "Lucida Console", monospace;}\
+      body { background: #000; color: #00ff00; margin: 0; padding: 20px; font-family: "VT52", "Courier New", monospace; }\
+      h1 { font-size: 16px; color: #00ff00; margin: 0 0 10px 0; }\
+      .wrap { border: 2px solid #00ff00; border-radius: 8px; padding: 12px; background: rgba(0,0,0,0.85);}\
+      .hint { color: #88ff88; font-size: 12px; margin-bottom: 10px; }\
+      .row { display: flex; gap: 12px; flex-wrap: wrap; }\
+      .drive { flex: 1 1 360px; min-width: 320px; border: 1px solid #00aa00; border-radius: 6px; padding: 10px; background: rgba(0,255,0,0.04);}\
+      .drive h2 { font-size: 14px; margin: 0 0 6px 0; }\
+      .drive .name { color: #00ff00; }\
+      .drive .msg { color: #88ff88; }\
+      .drop { margin-top: 8px; border: 1px dashed #00ff00; border-radius: 4px; padding: 16px; text-align: center; color: #88ff88;}\
+      .actions { margin-top: 8px; display: flex; gap: 8px; }\
+      .btn { background: #001900; color: #00ff00; border: 1px solid #00ff00; border-radius: 4px; padding: 6px 10px; cursor: pointer; }\
+      .btn:hover { background: rgba(0,255,0,0.08);}\
+      hr { border: none; border-top: 1px solid #003300; margin: 12px 0; }\
     </style>\
   </head>\
-  <body>Drop disk images in the areas below.<br/><br/><hr/>';
+  <body>\
+    <div class="wrap">\
+      <h1>Disk Manager</h1>\
+      <div class="hint">Drag and drop a .dsk file onto a drive below, or click Download to save the current disk image.</div>\
+      <div class="row">';
   var post = '<form id="postform" action="" method="post"\
 onsubmit="window.close();">\
 <input type="submit" value="Close Window"></form></body></html>';
@@ -1022,14 +1039,23 @@ onsubmit="window.close();">\
   var w = window.open("", "DiskMountWindow", "");
   w.document.write(pre);
 
-  for (var d = 0; d < 4; d++) {
+  for (var d = 1; d < 4; d++) {
     var disk = "dsk" + d;
     var name = this.memio.drives[d].name;
-    w.document.write('<div id="' + disk + '"><br/>');
-    w.document.write(disk + ': <span id="' + disk + 'name">' + name + '</span>');
-    w.document.write(' <span id="' + disk + 'msg"></span>');
-    w.document.write('<br/><br/></div>');
-    w.document.write('<hr/>');
+    w.document.write('<div class="drive">');
+    w.document.write('<h2>Drive ' + String.fromCharCode(65 + d) + ':</h2>');
+    w.document.write('<div>Image: <span class="name" id="' + disk + 'name">' + name + '</span></div>');
+    w.document.write('<div class="msg" id="' + disk + 'msg"></div>');
+    if (d === 0) {
+      // Boot disk is locked/read-only in the UI
+      w.document.write('<div class="drop" style="opacity:0.6; cursor:not-allowed;">Boot Disk (locked)</div>');
+    } else {
+      w.document.write('<div class="drop" id="' + disk + '">Drop .dsk here to mount</div>');
+      w.document.write('<div class="actions">');
+      w.document.write('<button class="btn" id="' + disk + 'download">Download .dsk</button>');
+      w.document.write('</div>');
+    }
+    w.document.write('</div>');
   }
 
   for (var drv = 0; drv < 4; drv++) {
@@ -1052,6 +1078,24 @@ onsubmit="window.close();">\
   }
 
   w.document.write(post);
+  // Wire up events in the new window
+  for (var drv = 1; drv < 4; drv++) {
+    (function(vt, wref, d){
+      var div = wref.document.getElementById("dsk"+d);
+      var msg = wref.document.getElementById("dsk"+d+"msg");
+      var dname = wref.document.getElementById("dsk"+d+"name");
+      var dl = wref.document.getElementById("dsk"+d+"download");
+      div.addEventListener("dragenter", function(e){ vt.handleDskDragS(e, msg); }, false);
+      div.addEventListener("dragleave", function(e){ vt.handleDskDragE(e, msg); }, false);
+      div.addEventListener("dragend",   function(e){ vt.handleDskDragE(e, msg); }, false);
+      div.addEventListener("dragover", vt.cancelEvent, false);
+      div.addEventListener("drop", function(e){ vt.handleDskDrop(e, msg, dname, d); }, false);
+      dl.addEventListener("click", function(){
+        // Dump drive and open save window
+        vt.memio.dumpDisk(d, function(data){ vt.openPostWindow('dsk', vt.memio.drives[d].name, data); });
+      }, false);
+    })(this, w, drv);
+  }
   w.document.close();
 }
 
