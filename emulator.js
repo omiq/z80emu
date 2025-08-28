@@ -221,10 +221,72 @@ Emulator.prototype.doInit = function() {
    'CP/M 2.2 starting ...\r\n' +
     '\r\n');
   
+  // Initialize disk drive icons
+  this.initDiskDriveIcons();
+  
   // Auto-boot sequence: load CP/M disk and boot
   this.autoBootSequence();
   
   return false;
+};
+
+Emulator.prototype.initDiskDriveIcons = function() {
+  // Initialize disk drive icons with click handlers
+  var emulator = this;
+  
+  // Set up click handlers for each drive
+  for (var i = 0; i < 4; i++) {
+    var driveElement = document.getElementById('drive-' + String.fromCharCode(97 + i)); // a, b, c, d
+    if (driveElement) {
+      driveElement.addEventListener('click', function(driveNum) {
+        return function() {
+          emulator.handleDiskDriveClick(driveNum);
+        };
+      }(i));
+    }
+  }
+  
+  // Update drive status based on current state
+  this.updateDiskDriveIcons();
+};
+
+Emulator.prototype.handleDiskDriveClick = function(driveNum) {
+  if (driveNum === 0) {
+    // Drive A is the boot disk - show info
+    this.showPopUp("Drive A: Boot Disk (emu-cpm22a.dsk)", 2000);
+    return;
+  }
+  
+  // For other drives, open the disk mount window
+  this.openDiskMountWindow();
+};
+
+Emulator.prototype.updateDiskDriveIcons = function() {
+  // Update the visual state of disk drive icons
+  for (var i = 0; i < 4; i++) {
+    var driveElement = document.getElementById('drive-' + String.fromCharCode(97 + i));
+    var nameElement = document.getElementById('drive-' + String.fromCharCode(97 + i) + '-name');
+    var statusElement = document.getElementById('drive-' + String.fromCharCode(97 + i) + '-status');
+    
+    if (driveElement && this.memio && this.memio.drives && this.memio.drives[i]) {
+      var drive = this.memio.drives[i];
+      var name = drive.name || 'Empty';
+      var status = 'Empty';
+      
+      if (name !== 'dsk' + i + '.cpm') {
+        status = 'Mounted';
+        driveElement.classList.add('mounted');
+        driveElement.classList.remove('empty');
+      } else {
+        status = 'Empty';
+        driveElement.classList.add('empty');
+        driveElement.classList.remove('mounted');
+      }
+      
+      if (nameElement) nameElement.textContent = name;
+      if (statusElement) statusElement.textContent = status;
+    }
+  }
 };
 
 Emulator.prototype.autoBootSequence = function() {
@@ -765,6 +827,9 @@ Emulator.prototype.doWaitIO = function() {
           this.autoBooting = false;
           // this.vt100("Disks loaded, verifying sectors...\r\n");
           
+          // Update disk drive icons to reflect mounted disks
+          this.updateDiskDriveIcons();
+          
           // Verify that the boot sector exists before trying to boot
           var emulator = this;
           this.memio.dbPromise.then(function(db) {
@@ -1030,6 +1095,8 @@ Emulator.prototype.handleDskDrop = function(evt, div, divname, drv) {
         if (res) {
 	  n.innerHTML = f;
 	  m.innerHTML = "mounted succesfully.";
+	  // Update disk drive icons to reflect the new mount
+	  vt.updateDiskDriveIcons();
 	} else {
 	  m.innerHTML = f + " mount error."
 	}

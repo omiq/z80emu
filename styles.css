@@ -91,6 +91,82 @@ html, body {
   color:            #000000;  /* Black text for contrast */
 }
 
+/* Disk Drive Icons */
+#disk-drives {
+  position:         fixed;
+  top:              10px;
+  right:            10px;
+  display:          flex;
+  flex-direction:   column;
+  gap:              8px;
+  z-index:          1000;
+  background:       rgba(0, 0, 0, 0.8);
+  padding:          12px;
+  border-radius:    8px;
+  border:           2px solid #00ff00;
+  box-shadow:       0 4px 8px rgba(0, 0, 0, 0.5);
+}
+
+.disk-drive {
+  display:          flex;
+  align-items:      center;
+  gap:              8px;
+  padding:          8px;
+  background:       rgba(0, 0, 0, 0.6);
+  border:           1px solid #00ff00;
+  border-radius:    4px;
+  cursor:           pointer;
+  transition:       all 0.2s ease;
+  min-width:        200px;
+}
+
+.disk-drive:hover {
+  background:       rgba(0, 255, 0, 0.1);
+  border-color:     #00ff00;
+  transform:        translateX(-2px);
+}
+
+.disk-drive.mounted {
+  border-color:     #00ff00;
+  background:       rgba(0, 255, 0, 0.05);
+}
+
+.disk-drive.empty {
+  border-color:     #666;
+  opacity:          0.7;
+}
+
+.disk-icon {
+  font-size:        20px;
+  width:            24px;
+  text-align:       center;
+}
+
+.disk-label {
+  font-family:      "VT52", "Courier New", monospace;
+  font-weight:      bold;
+  color:            #00ff00;
+  min-width:        20px;
+}
+
+.disk-name {
+  font-family:      "VT52", "Courier New", monospace;
+  font-size:        12px;
+  color:            #00ff00;
+  flex:             1;
+  overflow:         hidden;
+  text-overflow:    ellipsis;
+  white-space:      nowrap;
+}
+
+.disk-status {
+  font-family:      "VT52", "Courier New", monospace;
+  font-size:        10px;
+  color:            #888;
+  text-align:       right;
+  min-width:        60px;
+}
+
 #vt100 #cursor.bright { 
   background-color: #00ff00;  /* Bright green background */
   color:            #000000;  /* Black text for contrast */

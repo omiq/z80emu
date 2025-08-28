@@ -70,7 +70,7 @@
     <script type="text/javascript" src="memio.js?v=2025.01.27.33"></script>
     <script type="text/javascript" src="z80.js?v=2025.01.27.33"></script>
     <script type="text/javascript" src="vt100.js?v=2025.01.27.79"></script>
-    <script type="text/javascript" src="emulator.js?v=2025.01.27.80"></script>
+    <script type="text/javascript" src="emulator.js?v=2025.01.27.81"></script>
     <!--<script type="text/javascript" src="cachedbg.js"></script>-->
     <meta name="description" content="Run CP/M right in your browser with this online emulator!">
   </head>
@@ -80,5 +80,36 @@
   -->
   <body onload="setTimeout('new Emulator()', 100)" scroll="no">
     <noscript>JavaScript must be enabled for the emulator</noscript>
+    
+    <!-- Disk Drive Icons -->
+    <div id="disk-drives">
+      <div class="disk-drive" id="drive-a" data-drive="0">
+        <div class="disk-icon">🖥️</div>
+        <div class="disk-label">A:</div>
+        <div class="disk-name" id="drive-a-name">emu-cpm22a.dsk</div>
+        <div class="disk-status" id="drive-a-status">Boot Disk</div>
+      </div>
+      
+      <div class="disk-drive" id="drive-b" data-drive="1">
+        <div class="disk-icon">💾</div>
+        <div class="disk-label">B:</div>
+        <div class="disk-name" id="drive-b-name">mbasic.dsk</div>
+        <div class="disk-status" id="drive-b-status">Microsoft BASIC</div>
+      </div>
+      
+      <div class="disk-drive" id="drive-c" data-drive="2">
+        <div class="disk-icon">💾</div>
+        <div class="disk-label">C:</div>
+        <div class="disk-name" id="drive-c-name">Empty</div>
+        <div class="disk-status" id="drive-c-status">Click to mount</div>
+      </div>
+      
+      <div class="disk-drive" id="drive-d" data-drive="3">
+        <div class="disk-icon">💾</div>
+        <div class="disk-label">D:</div>
+        <div class="disk-name" id="drive-d-name">Empty</div>
+        <div class="disk-status" id="drive-d-status">Click to mount</div>
+      </div>
+    </div>
   </body>
 </html>
