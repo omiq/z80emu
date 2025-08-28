@@ -99,83 +99,14 @@ function VT100(container) {
   // Enhanced terminal compatibility - supports multiple terminal standards
   this.terminalMode = 'vt100'; // Default mode, can be 'televideo', 'adm3a', 'ansi'
   
-  if (typeof linkifyURLs == 'undefined' || linkifyURLs <= 0) {
-    this.urlRE            = null;
-  } else {
-    this.urlRE            = new RegExp(
-    // Known URL protocol are "http", "https", and "ftp".
-    '(?:http|https|ftp)://' +
-
-    // Optionally allow username and passwords.
-    '(?:[^:@/ \u00A0]*(?::[^@/ \u00A0]*)?@)?' +
-
-    // Hostname.
-    '(?:[1-9][0-9]{0,2}(?:[.][1-9][0-9]{0,2}){3}|' +
-    '[0-9a-fA-F]{0,4}(?::{1,2}[0-9a-fA-F]{1,4})+|' +
-    '(?!-)[^[!"#$%&\'()*+,/:;<=>?@\\^_`{|}~\u0000- \u007F-\u00A0]+)' +
-
-    // Port
-    '(?::[1-9][0-9]*)?' +
-
-    // Path.
-    '(?:/(?:(?![/ \u00A0]|[,.)}"\u0027!]+[ \u00A0]|[,.)}"\u0027!]+$).)*)*|' +
-
-    (linkifyURLs <= 1 ? '' :
-    // Also support URLs without a protocol (assume "http").
-    // Optional username and password.
-    '(?:[^:@/ \u00A0]*(?::[^@/ \u00A0]*)?@)?' +
-
-    // Hostnames must end with a well-known top-level domain or must be
-    // numeric.
-    '(?:[1-9][0-9]{0,2}(?:[.][1-9][0-9]{0,2}){3}|' +
-    'localhost|' +
-    '(?:(?!-)' +
-        '[^.[!"#$%&\'()*+,/:;<=>?@\\^_`{|}~\u0000- \u007F-\u00A0]+[.]){2,}' +
-    '(?:(?:com|net|org|edu|gov|aero|asia|biz|cat|coop|info|int|jobs|mil|mobi|'+
-    'museum|name|pro|tel|travel|ac|ad|ae|af|ag|ai|al|am|an|ao|aq|ar|as|at|' +
-    'au|aw|ax|az|ba|bb|bd|be|bf|bg|bh|bi|bj|bm|bn|bo|br|bs|bt|bv|bw|by|bz|' +
-    'ca|cc|cd|cf|cg|ch|ci|ck|cl|cm|cn|co|cr|cu|cv|cx|cy|cz|de|dj|dk|dm|do|' +
-    'dz|ec|ee|eg|er|es|et|eu|fi|fj|fk|fm|fo|fr|ga|gb|gd|ge|gf|gg|gh|gi|gl|' +
-    'gm|gn|gp|gq|gr|gs|gt|gu|gw|gy|hk|hm|hn|hr|ht|hu|id|ie|il|im|in|io|iq|' +
-    'ir|is|it|je|jm|jo|jp|ke|kg|kh|ki|km|kn|kp|kr|kw|ky|kz|la|lb|lc|li|lk|' +
-    'lr|ls|lt|lu|lv|ly|ma|mc|md|me|mg|mh|mk|ml|mm|mn|mo|mp|mq|mr|ms|mt|mu|' +
-    'mv|mw|mx|my|mz|na|nc|ne|nf|ng|ni|nl|no|np|nr|nu|nz|om|pa|pe|pf|pg|ph|' +
-    'pk|pl|pm|pn|pr|ps|pt|pw|py|qa|re|ro|rs|ru|rw|sa|sb|sc|sd|se|sg|sh|si|' +
-    'sj|sk|sl|sm|sn|so|sr|st|su|sv|sy|sz|tc|td|tf|tg|th|tj|tk|tl|tm|tn|to|' +
-    'tp|tr|tt|tv|tw|tz|ua|ug|uk|us|uy|uz|va|vc|ve|vg|vi|vn|vu|wf|ws|ye|yt|' +
-    'yu|za|zm|zw|arpa)(?![a-zA-Z0-9])|[Xx][Nn]--[-a-zA-Z0-9]+))' +
-
-    // Port
-    '(?::[1-9][0-9]{0,4})?' +
-
-    // Path.
-    '(?:/(?:(?![/ \u00A0]|[,.)}"\u0027!]+[ \u00A0]|[,.)}"\u0027!]+$).)*)*|') +
-
-    // In addition, support e-mail address. Optionally, recognize "mailto:"
-    '(?:mailto:)' + (linkifyURLs <= 1 ? '' : '?') +
-
-    // Username:
-    '[-_.+a-zA-Z0-9]+@' +
-
-    // Hostname.
-    '(?!-)[-a-zA-Z0-9]+(?:[.](?!-)[-a-zA-Z0-9]+)?[.]' +
-    '(?:(?:com|net|org|edu|gov|aero|asia|biz|cat|coop|info|int|jobs|mil|mobi|'+
-    'museum|name|pro|tel|travel|ac|ad|ae|af|ag|ai|al|am|an|ao|aq|ar|as|at|' +
-    'au|aw|ax|az|ba|bb|bd|be|bf|bg|bh|bi|bj|bm|bn|bo|br|bs|bt|bv|bw|by|bz|' +
-    'ca|cc|cd|cf|cg|ch|ci|ck|cl|cm|cn|co|cr|cu|cv|cx|cy|cz|de|dj|dk|dm|do|' +
-    'dz|ec|ee|eg|er|es|et|eu|fi|fj|fk|fm|fo|fr|ga|gb|gd|ge|gf|gg|gh|gi|gl|' +
-    'gm|gn|gp|gq|gr|gs|gt|gu|gw|gy|hk|hm|hn|hr|ht|hu|id|ie|il|im|in|io|iq|' +
-    'ir|is|it|je|jm|jo|jp|ke|kg|kh|ki|km|kn|kp|kr|kw|ky|kz|la|lb|lc|li|lk|' +
-    'lr|ls|lt|lu|lv|ly|ma|mc|md|me|mg|mh|mk|ml|mm|mn|mo|mp|mq|mr|ms|mt|mu|' +
-    'mv|mw|mx|my|mz|na|nc|ne|nf|ng|ni|nl|no|np|nr|nu|nz|om|pa|pe|pf|pg|ph|' +
-    'pk|pl|pm|pn|pr|ps|pt|pw|py|qa|re|ro|rs|ru|rw|sa|sb|sc|sd|se|sg|sh|si|' +
-    'sj|sk|sl|sm|sn|so|sr|st|su|sv|sy|sz|tc|td|tf|tg|th|tj|tk|tl|tm|tn|to|' +
-    'tp|tr|tt|tv|tw|tz|ua|ug|uk|us|uy|uz|va|vc|ve|vg|vi|vn|vu|wf|ws|ye|yt|' +
-    'yu|za|zm|zw|arpa)(?![a-zA-Z0-9])|[Xx][Nn]--[-a-zA-Z0-9]+)' +
-
-    // Optional arguments
-    '(?:[?](?:(?![ \u00A0]|[,.)}"\u0027!]+[ \u00A0]|[,.)}"\u0027!]+$).)*)?');
-  }
+  // Text wrapping mode - allows text to wrap beyond 80 columns
+  this.textWrapMode = false; // Default: clipping (false = clip, true = wrap)
+  
+  // Text wrapping mode - allows text to wrap beyond 80 columns
+  this.textWrapMode = false; // Default: clipping (false = clip, true = wrap)
+  
+  // Temporarily disable URL regex to fix syntax error
+  this.urlRE = null;
   this.getUserSettings();
   this.initializeElements(container);
   this.maxScrollbackLines = 100; // Reduced to prevent excessive accumulation
@@ -206,11 +137,13 @@ function VT100(container) {
   // Handle window resize to keep cursor properly positioned
   var resizeHandler = function(vt100) {
     return function() {
+      // Recalculate terminal width if text wrapping is enabled
+      if (vt100.textWrapMode) {
+        vt100.updateWidth();
+      }
       // Reposition cursor after resize
       if (vt100.cursor.style.visibility != 'hidden') {
-        var visibleY = vt100.cursorY;
-        // Position cursor at the correct line with padding offset and baseline alignment
-        vt100.cursor.style.top = (visibleY * 20 + 20) + 'px'; // Fixed pixel dimensions: 20px per row + 20px padding
+        vt100.showCursor();
       }
     };
   }(this);
@@ -250,6 +183,10 @@ function VT100(container) {
     console.log('scrollable.clientLeft:', this.scrollable.clientLeft);
     console.log('scrollable.offsetHeight:', this.scrollable.offsetHeight);
     console.log('scrollable.offsetWidth:', this.scrollable.offsetWidth);
+    console.log('scrollable.clientWidth:', this.scrollable.clientWidth);
+    console.log('scrollable.scrollWidth:', this.scrollable.scrollWidth);
+    console.log('Expected width: 680px');
+    console.log('Width difference:', this.scrollable.offsetWidth - 680, 'px');
     console.log('cursor.style.top:', this.cursor.style.top);
     console.log('cursor.style.left:', this.cursor.style.left);
     console.log('cursor.style.visibility:', this.cursor.style.visibility);
@@ -269,6 +206,20 @@ function VT100(container) {
     console.log('Testing Y position:', y);
     this.cursor.style.top = y + 'px';
     console.log('Cursor Y set to:', y + 'px');
+  }.bind(this);
+  
+  // Add function to fix container dimensions
+  window.fixContainerDimensions = function() {
+    if (this.scrollable) {
+      this.scrollable.style.width = '680px';
+      this.scrollable.style.maxWidth = '680px';
+      this.scrollable.style.overflow = 'hidden';
+      this.scrollable.style.position = 'relative';
+      this.scrollable.style.left = '0px';
+      this.scrollable.style.marginLeft = '0px';
+      this.scrollable.style.transform = 'none';
+      console.log('Container dimensions fixed');
+    }
   }.bind(this);
 }
 
@@ -323,6 +274,17 @@ VT100.prototype.reset = function(clearHistory) {
   this.refreshInvertedState();
   this.clearRegion(0, 0, this.terminalWidth, this.terminalHeight,
                    this.color, this.style);
+  
+  // Fix container dimensions after initialization
+  if (this.scrollable) {
+    this.scrollable.style.width = '680px';
+    this.scrollable.style.maxWidth = '680px';
+    this.scrollable.style.overflow = 'hidden';
+    this.scrollable.style.position = 'relative';
+    this.scrollable.style.left = '0px';
+    this.scrollable.style.marginLeft = '0px';
+    this.scrollable.style.transform = 'none';
+  }
 };
 
 // Enhanced terminal compatibility functions
@@ -477,7 +439,7 @@ VT100.prototype.getUserSettings = function() {
   // If the menu is unchanged from last time, default values can be
   // looked up in a cookie associated with this page.
   this.signature            = 1;
-  this.utfPreferred         = true;
+  this.utfPreferred         = true; // Force Unicode enabled by default
   this.visualBell           = typeof suppressAllAudio != 'undefined' &&
                               suppressAllAudio;
   this.autoprint            = true;
@@ -505,11 +467,12 @@ VT100.prototype.getUserSettings = function() {
   if (settings >= 0) {
     settings                = document.cookie.substr(settings + key.length).
                                                    replace(/([0-1]*).*/, "$1");
-    if (settings.length == 3 + (typeof userCSSList == 'undefined' ?
+    if (settings.length >= 4 + (typeof userCSSList == 'undefined' ?
                                 0 : userCSSList.length)) {
       this.utfPreferred     = settings.charAt(0) != '0';
       this.visualBell       = settings.charAt(1) != '0';
       this.autoprint        = settings.charAt(2) != '0';
+      this.textWrapMode     = settings.charAt(3) != '0';
       if (typeof userCSSList != 'undefined') {
         for (var i = 0; i < userCSSList.length; ++i) {
           userCSSList[i][2] = settings.charAt(i + 3) != '0';
@@ -517,14 +480,42 @@ VT100.prototype.getUserSettings = function() {
       }
     }
   }
-  this.utfEnabled           = this.utfPreferred;
+  this.utfEnabled           = true; // Force Unicode enabled regardless of settings
+  
+  // Clear any existing cookie settings that might disable Unicode
+  var key = 'shellInABox=' + this.signature + ':';
+  var existingCookie = document.cookie.indexOf(key);
+  if (existingCookie >= 0) {
+    var cookieValue = document.cookie.substr(existingCookie + key.length);
+    var settings = cookieValue.replace(/([0-1]*).*/, "$1");
+    if (settings.length >= 1) {
+      // Force the first character (Unicode setting) to '1'
+      var newSettings = '1' + settings.substring(1);
+      var newCookie = key + newSettings;
+      var d = new Date();
+      d.setDate(d.getDate() + 3653);
+      document.cookie = newCookie + ';expires=' + d.toGMTString();
+    }
+  }
+  
+  // Force container width and positioning to prevent expansion
+  if (this.scrollable) {
+    this.scrollable.style.width = '680px';
+    this.scrollable.style.maxWidth = '680px';
+    this.scrollable.style.overflow = 'hidden';
+    this.scrollable.style.position = 'relative';
+    this.scrollable.style.left = '0px';
+    this.scrollable.style.marginLeft = '0px';
+    this.scrollable.style.transform = 'none';
+  }
 };
 
 VT100.prototype.storeUserSettings = function() {
   var settings  = 'shellInABox=' + this.signature + ':' +
                   (this.utfEnabled ? '1' : '0') +
                   (this.visualBell ? '1' : '0') +
-                  (this.autoprint  ? '1' : '0');
+                  (this.autoprint  ? '1' : '0') +
+                  (this.textWrapMode ? '1' : '0');
   if (typeof userCSSList != 'undefined') {
     for (var i = 0; i < userCSSList.length; ++i) {
       settings += userCSSList[i][2] ? '1' : '0';
@@ -768,7 +759,7 @@ VT100.prototype.initializeElements = function(container) {
   // Remember the dimensions of a standard character glyph. We would
   // expect that we could just check cursor.clientWidth/Height at any time,
   // Fixed pixel dimensions for consistent positioning
-  this.cursorWidth             = 8;  // Fixed character width in pixels
+  this.cursorWidth             = 7;  // Fixed character width in pixels (6px character + 1px gap)
   this.cursorHeight            = 20; // Fixed character height in pixels
 
   // IE has a slightly different boxing model, that we need to compensate for
@@ -1346,8 +1337,30 @@ VT100.prototype.insertBlankLine = function(y, color, style) {
 };
 
 VT100.prototype.updateWidth = function() {
-  // Force 80 columns for traditional terminal behavior
+  // Always force 80 columns for traditional terminal behavior
+  // Text wrapping mode is handled separately and doesn't affect the terminal width
   this.terminalWidth = 80;
+  
+  // Ensure cursor position is within bounds
+  if (this.cursorX >= this.terminalWidth) {
+    this.cursorX = this.terminalWidth - 1;
+  }
+  
+  // Ensure the scrollable container maintains correct positioning
+  if (this.scrollable) {
+    this.scrollable.style.position = 'relative';
+    this.scrollable.style.left = '0px';
+    this.scrollable.style.marginLeft = '0px';
+    this.scrollable.style.transform = 'none';
+    
+    // Check if the container has been shifted and reset it
+    if (this.scrollable.offsetLeft < 0) {
+      this.scrollable.style.left = '0px';
+      this.scrollable.style.marginLeft = '0px';
+      this.scrollable.style.transform = 'none';
+    }
+  }
+  
   return this.terminalWidth;
 };
 
@@ -1381,6 +1394,12 @@ VT100.prototype.truncateLines = function(width) {
   if (width < 0) {
     width             = 0;
   }
+  
+  // If text wrapping is enabled, don't truncate lines
+  if (this.textWrapMode) {
+    return;
+  }
+  
   for (var line = this.console[this.currentScreen].firstChild; line;
        line = line.nextSibling) {
     if (line.tagName == 'DIV') {
@@ -1442,6 +1461,10 @@ VT100.prototype.putString = function(x, y, text, color, style) {
   if (!style) {
     style                           = '';
   }
+  
+  // Store the original x coordinate for cursor positioning
+  var originalX = x;
+  
   var yIdx                          = y + this.numScrollbackLines;
   var line;
   var sibling;
@@ -1490,6 +1513,8 @@ VT100.prototype.putString = function(x, y, text, color, style) {
       xPos                         += len;
       span                          = span.nextSibling;
     }
+    
+
 
     if (text.length) {
       // If current <span> is not long enough, pad with spaces or add new
@@ -1598,8 +1623,8 @@ VT100.prototype.putString = function(x, y, text, color, style) {
     }
   }
 
-  // Position cursor
-  this.cursorX                      = x + text.length;
+  // Position cursor using original x coordinate to avoid padding offset
+  this.cursorX                      = originalX + text.length;
   if (this.cursorX >= this.terminalWidth) {
     this.cursorX                    = this.terminalWidth - 1;
     if (this.cursorX < 0) {
@@ -1641,13 +1666,9 @@ VT100.prototype.putString = function(x, y, text, color, style) {
       this.setTextContent(this.cursor, ' ');
     }
   }
-  if (pixelX >= 0) {
-    this.cursor.style.left          = (pixelX + (this.isIE ? 1 : 0))  + 'px';
-  } else {
-    this.setTextContent(this.space, this.spaces(this.cursorX));
-    this.cursor.style.left          = this.space.offsetWidth +
-                                      console.offsetLeft + 'px';
-  }
+  // Always use consistent cursor positioning
+  this.cursor.style.left = (originalX * 7 + 20) + 'px'; // Fixed pixel dimensions: 7px per column + 20px padding
+  window.console.log('putString: originalX=' + originalX + ', cursorX=' + this.cursorX + ', calculated left=' + (originalX * 7 + 20) + 'px, actual left=' + this.cursor.style.left);
   // Calculate the actual cursor position relative to the visible terminal
   this.cursorY                      = yIdx - this.numScrollbackLines;
   // Ensure cursor stays within the visible terminal area
@@ -1667,10 +1688,7 @@ VT100.prototype.putString = function(x, y, text, color, style) {
   var calculatedTop = (visibleY * 20 + 20);
   window.console.log('putString: using unified positioning, visibleY=' + visibleY + ', setting top to ' + calculatedTop + 'px');
   this.cursor.style.top = calculatedTop + 'px';
-              // Also ensure cursor X position is relative to scrollable container
-            if (pixelX < 0) {
-              this.cursor.style.left = (this.cursorX * 8 + 20) + 'px'; // 8px per column + 20px padding
-            }
+
   
   // Log final cursor position
   window.console.log('putString: final cursor position - top: ' + this.cursor.style.top + ', left: ' + this.cursor.style.left);
@@ -1751,8 +1769,8 @@ VT100.prototype.gotoXY = function(x, y) {
               var calculatedTop = (visibleY * 20 + 20); // Fixed pixel dimensions: 20px per row + 20px padding
               this.cursor.style.top = calculatedTop + 'px';
               
-              // Fixed pixel dimensions: 6px per column + 20px padding
-              this.cursor.style.left = (this.cursorX * 8 + 20) + 'px';
+              // Fixed pixel dimensions: 7px per column + 20px padding
+              this.cursor.style.left = (this.cursorX * 7 + 20) + 'px';
   
   this.needWrap = false;
 };
@@ -1824,7 +1842,7 @@ VT100.prototype.showCursor = function(x, y) {
     // Position cursor at the correct line with padding offset and baseline alignment
     this.cursor.style.top = (this.cursorY * 20 + 20) + 'px'; // Fixed pixel dimensions: 20px per row + 20px padding
     // Use the same X positioning logic as putString when pixelX < 0
-    this.cursor.style.left = (this.cursorX * 8 + 20) + 'px'; // Fixed pixel dimensions: 8px per column + 20px padding
+    this.cursor.style.left = (this.cursorX * 7 + 20) + 'px'; // Fixed pixel dimensions: 7px per column + 20px padding
     }
     return true;
   }
@@ -2167,6 +2185,39 @@ VT100.prototype.toggleBell = function() {
   this.visualBell = !this.visualBell;
 };
 
+VT100.prototype.toggleTextWrap = function() {
+  this.textWrapMode = !this.textWrapMode;
+  this.applyTextWrapMode();
+};
+
+VT100.prototype.applyTextWrapMode = function() {
+  var scrollable = document.getElementById('scrollable');
+  if (this.textWrapMode) {
+    // Enable wrapping - make terminal wider and allow overflow
+    scrollable.style.width = 'auto';
+    scrollable.style.maxWidth = 'none';
+    scrollable.style.overflow = 'auto';
+  } else {
+    // Disable wrapping - restore fixed 80-column width
+    scrollable.style.width = '680px';
+    scrollable.style.maxWidth = '680px';
+    scrollable.style.overflow = 'hidden';
+  }
+  
+  // Ensure the container positioning remains correct
+  scrollable.style.position = 'relative';
+  scrollable.style.left = '0px';
+  scrollable.style.marginLeft = '0px';
+  scrollable.style.transform = 'none';
+  
+  // Force a reflow to ensure positioning is applied
+  scrollable.offsetHeight;
+  
+  // Recalculate terminal width and reposition cursor
+  this.updateWidth();
+  this.showCursor();
+};
+
 VT100.prototype.about = function() {
   alert("Online CP/M 2.2 Emulator\nChris Garrett\nhttps://retrogamecoders.com/");
 };
@@ -2180,6 +2231,18 @@ VT100.prototype.hideContextMenu = function() {
 };
 
 VT100.prototype.extendContextMenu = function(entries, actions) {
+  // Add text wrapping option to context menu
+  var wrapLi = document.createElement('li');
+  wrapLi.id = 'textwrap';
+  wrapLi.innerHTML = (this.textWrapMode ? '<img src="enabled.gif" />' : '') + 'Text Wrapping';
+  entries.appendChild(wrapLi);
+  
+  // Add separator
+  var hr = document.createElement('hr');
+  entries.appendChild(hr);
+  
+  // Add action for text wrapping toggle
+  actions.push(this.toggleTextWrap);
 };
 
 VT100.prototype.showContextMenu = function(x, y) {
@@ -2888,8 +2951,10 @@ VT100.prototype.bs = function() {
     
     // Move cursor back one position first
     this.gotoXY(this.cursorX - 1, this.cursorY);
+
+    // Temporarily hide the cursor by setting its left position to -1000px
     this.cursor.style.left = '-1000px';
-    // Clear the character at the new cursor position without advancing cursor
+    // Clear the character at the new cursor position witho     ut advancing cursor
     //this.clearRegion(this.cursorX, this.cursorY, 1, 1, this.color, this.style);
     
     window.console.log('Backspace: finished at cursorX=' + this.cursorX + ', cursorY=' + this.cursorY);
@@ -2994,7 +3059,7 @@ VT100.prototype.lf = function(count) {
     // Update cursor visual position using unified positioning logic
     // Position cursor at the correct line with padding offset and baseline alignment
     this.cursor.style.top = (this.cursorY * 20 + 20) + 'px'; // Fixed pixel dimensions: 20px per row + 20px padding
-    this.cursor.style.left = (this.cursorX * 8 + 20) + 'px'; // Fixed pixel dimensions: 8px per column + 20px padding
+    this.cursor.style.left = (this.cursorX * 7 + 20) + 'px'; // Fixed pixel dimensions: 7px per column + 20px padding
   }
   window.console.log('LF finished: cursorY=' + this.cursorY);
   this.needWrap = false; // Reset wrap flag after line feed
@@ -3890,6 +3955,14 @@ VT100.prototype.renderString = function(s, showCursor) {
   }
   // Write text at current cursor position
   window.console.log('renderString: calling putString with cursorX=' + this.cursorX + ', cursorY=' + this.cursorY + ', text="' + s + '"');
+  // Add debugging for strange characters
+  if (s.indexOf('Á') !== -1 || s.indexOf('À') !== -1) {
+    window.console.log('WARNING: Strange characters detected in text: "' + s + '"');
+    window.console.log('Text length: ' + s.length);
+    for (var i = 0; i < s.length; i++) {
+      window.console.log('Char ' + i + ': "' + s.charAt(i) + '" (code: ' + s.charCodeAt(i) + ')');
+    }
+  }
   this.putString(this.cursorX, this.cursorY, s, this.color, this.style);
 };
 

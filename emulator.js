@@ -96,6 +96,12 @@ function Emulator(container) {
   this.keys = ''; // Initialize keys buffer
   this.line = ''; // Initialize line buffer
   this.waitloop = 0; // Initialize wait loop counter
+  
+  // Apply text wrap mode if it was saved in user settings
+  if (this.textWrapMode) {
+    this.applyTextWrapMode();
+  }
+  
   this.gotoState(1 /* STATE_INIT */);
 };
 extend(Emulator, VT100);

@@ -85,7 +85,7 @@ html, body {
   top:              0px;
   overflow:         hidden;
   z-index:          1;
-  width:            8px;      /* Fixed character width */
+  width:            7px;      /* Fixed character width (6px character + 1px gap) */
   height:           20px;     /* Fixed character height */
   background-color: #00ff00;  /* Default green background */
   color:            #000000;  /* Black text for contrast */
@@ -269,6 +269,13 @@ html, body {
   padding-bottom:   60px;     /* Increased bottom padding to console content */
   min-height:       100%;     /* Ensure console takes full height */
   margin-bottom:    20px;     /* Additional margin for safety */
+  position:         relative; /* Ensure proper positioning context */
+}
+
+/* Ensure console content respects container padding */
+#vt100 #console div, #vt100 #alt_console div {
+  position:         relative; /* Ensure proper positioning */
+  /* Remove padding-left and margin-left resets to allow container padding to work */
 }
 
 /* Ensure the main vt100 container has proper spacing */
