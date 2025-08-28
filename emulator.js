@@ -228,7 +228,7 @@ Emulator.prototype.doInit = function() {
 };
 
 Emulator.prototype.autoBootSequence = function() {
-  // Auto-boot sequence: equivalent to "r 0 emu-cpm22a.dsk", "b", "g"
+  // Auto-boot sequence: equivalent to "r 0 emu-cpm22a.dsk", "r 1 mbasic.dsk", "b", "g"
   this.vt100("Loading CP/M 2.2 ... \r\n");
 
   this.vt100("\t   _____ _____   ____  __ \r\n");
@@ -248,10 +248,11 @@ Emulator.prototype.autoBootSequence = function() {
         // Database is ready, proceed with auto-boot
         // emulator.vt100("Database initialized, loading disk...\r\n");
         
-        // Step 1: Load disk image into drive 0
+        // Step 1: Load CP/M disk image into drive 0
         var file = "emu-cpm22a.dsk"; // Try relative path first
         // emulator.vt100("Attempting to load: " + file + "\r\n");
         emulator.autoBooting = true; // Flag to indicate auto-boot sequence
+        emulator.autoBootStep = 1; // Track which step we're on
         emulator.io_op = 3; // netload of disc image
         emulator.loaddrv = 0;
         emulator.loaddrvurl = file;
@@ -747,31 +748,46 @@ Emulator.prototype.doWaitIO = function() {
       
       // Check if this was part of auto-boot sequence
       if (this.autoBooting) {
-        this.autoBooting = false;
-        // this.vt100("Disk loaded, verifying sectors...\r\n");
-        
-        // Verify that the boot sector exists before trying to boot
-        var emulator = this;
-        this.memio.dbPromise.then(function(db) {
-          return db.get('sectors', 0*65536+0*256+1-1); // Check if boot sector exists
-        }).then(function(sector) {
-          if (sector) {
-            // emulator.vt100("Boot sector found, starting CP/M 2.2...\r\n");
-            // Load bootloader from drive 0 to address 0
-            emulator.memio.readSector(0, 0, 1, 0);
-            emulator.cpu.pc = 0;
-            emulator.io_op = 5; // wait for boot sector load
-            emulator.gotoState(7 /* STATE_IOWAIT */);
-          } else {
-            emulator.vt100("ERROR: Boot sector not found in database\r\n");
+        if (this.autoBootStep === 1) {
+          // Step 1 completed: CP/M disk loaded into drive 0
+          // Now load mbasic.dsk into drive 1
+          this.autoBootStep = 2;
+          var file = "mbasic.dsk";
+          this.io_op = 3; // netload of disc image
+          this.loaddrv = 1;
+          this.loaddrvurl = file;
+          this.netload(file);
+          this.gotoState(7 /* STATE_IOWAIT */);
+          return false;
+        } else if (this.autoBootStep === 2) {
+          // Step 2 completed: mbasic.dsk loaded into drive 1
+          // Now proceed with booting CP/M
+          this.autoBooting = false;
+          // this.vt100("Disks loaded, verifying sectors...\r\n");
+          
+          // Verify that the boot sector exists before trying to boot
+          var emulator = this;
+          this.memio.dbPromise.then(function(db) {
+            return db.get('sectors', 0*65536+0*256+1-1); // Check if boot sector exists
+          }).then(function(sector) {
+            if (sector) {
+              // emulator.vt100("Boot sector found, starting CP/M 2.2...\r\n");
+              // Load bootloader from drive 0 to address 0
+              emulator.memio.readSector(0, 0, 1, 0);
+              emulator.cpu.pc = 0;
+              emulator.io_op = 5; // wait for boot sector load
+              emulator.gotoState(7 /* STATE_IOWAIT */);
+            } else {
+              emulator.vt100("ERROR: Boot sector not found in database\r\n");
+              emulator.gotoState(2 /* STATE_PROMPT */);
+            }
+          }).catch(function(error) {
+            emulator.vt100("ERROR: Failed to verify sectors: " + error.message + "\r\n");
             emulator.gotoState(2 /* STATE_PROMPT */);
-          }
-        }).catch(function(error) {
-          emulator.vt100("ERROR: Failed to verify sectors: " + error.message + "\r\n");
-          emulator.gotoState(2 /* STATE_PROMPT */);
-        });
-        
-        return false;
+          });
+          
+          return false;
+        }
       }
       
       this.gotoState(2 /* STATE_PROMPT */);
