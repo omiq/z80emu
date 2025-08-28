@@ -253,7 +253,7 @@ Emulator.prototype.initDiskDriveIcons = function() {
 Emulator.prototype.handleDiskDriveClick = function(driveNum) {
   if (driveNum === 0) {
     // Drive A is the boot disk - show info
-    this.showPopUp("Drive A: Boot Disk (emu-cpm22a.dsk)", 2000);
+    this.showPopUp("Drive A: Boot Disk (emu-cpm.dsk)", 2000);
     return;
   }
   
@@ -273,14 +273,19 @@ Emulator.prototype.updateDiskDriveIcons = function() {
       var name = drive.name || 'Empty';
       var status = 'Empty';
       
-      if (name !== 'dsk' + i + '.cpm') {
+      if (i === 0) {
+        // Drive A is always locked (boot disk)
+        status = 'Boot Disk';
+        driveElement.classList.add('locked');
+        driveElement.classList.remove('mounted', 'empty');
+      } else if (name !== 'dsk' + i + '.cpm') {
         status = 'Mounted';
         driveElement.classList.add('mounted');
-        driveElement.classList.remove('empty');
+        driveElement.classList.remove('empty', 'locked');
       } else {
         status = 'Empty';
         driveElement.classList.add('empty');
-        driveElement.classList.remove('mounted');
+        driveElement.classList.remove('mounted', 'locked');
       }
       
       if (nameElement) nameElement.textContent = name;
@@ -290,7 +295,7 @@ Emulator.prototype.updateDiskDriveIcons = function() {
 };
 
 Emulator.prototype.autoBootSequence = function() {
-  // Auto-boot sequence: equivalent to "r 0 emu-cpm22a.dsk", "r 1 mbasic.dsk", "b", "g"
+  // Auto-boot sequence: equivalent to "r 0 emu-cpm.dsk", "r 1 mbasic.dsk", "b", "g"
   this.vt100("Loading CP/M 2.2 ... \r\n");
 
   this.vt100("\t   _____ _____   ____  __ \r\n");
@@ -311,7 +316,7 @@ Emulator.prototype.autoBootSequence = function() {
         // emulator.vt100("Database initialized, loading disk...\r\n");
         
         // Step 1: Load CP/M disk image into drive 0
-        var file = "emu-cpm22a.dsk"; // Try relative path first
+        var file = "emu-cpm.dsk"; // Try relative path first
         // emulator.vt100("Attempting to load: " + file + "\r\n");
         emulator.autoBooting = true; // Flag to indicate auto-boot sequence
         emulator.autoBootStep = 1; // Track which step we're on

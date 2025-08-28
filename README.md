@@ -137,7 +137,7 @@ z80emu/
 ├── hello.hex          # Intel HEX programs
 ├── test.hex           # More programs
 └── disks/             # Disk images directory
-    ├── emu-cpm22a.dsk # CP/M 2.2 (auto-loaded)
+    ├── emu-cpm.dsk # CP/M 2.2 (auto-loaded)
     ├── games.dsk      # Additional disk images
     └── utilities.dsk  # More disk images
 ```
@@ -172,7 +172,7 @@ x f<flag>              # Modify flags (s, z, i, h, p, c)
 ### Auto-Boot Feature (2025)
 
 The emulator now automatically loads and boots CP/M 2.2 on startup, eliminating the need for manual commands. Users no longer need to type:
-- `r 0 emu-cpm22a.dsk` (load disk)
+- `r 0 emu-cpm.dsk` (load disk)
 - `b` (boot)
 - `g` (go/run)
 

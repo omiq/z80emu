@@ -136,6 +136,16 @@ html, body {
   opacity:          0.7;
 }
 
+.disk-drive.locked {
+  opacity:           0.4;
+  cursor:            not-allowed;
+}
+
+.disk-drive.locked:hover {
+  background:        rgba(0, 0, 0, 0.6);
+  transform:         none;
+}
+
 .disk-icon {
   font-size:        20px;
   width:            24px;
