@@ -79,7 +79,7 @@ html, body {
   visibility:       hidden;
 }
 
-#vt100 #cursor {
+#vt100 #cxursor {
   position:         absolute;
   left:             0px;
   top:              0px;

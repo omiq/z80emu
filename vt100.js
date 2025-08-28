@@ -4222,3 +4222,20 @@ VT100.prototype.ctrlAlways = [
   false, false, false, true,  false, false, false, false
 ];
 
+// Function to send text directly to VT100 terminal for testing
+VT100.prototype.sendToVT100 = function(text) {
+  console.log('Sending to VT100:', JSON.stringify(text));
+  this.vt100(text);
+  return 'Text sent to VT100 emulator';
+};
+
+// Global function for easy access from console
+window.sendToVT100 = function(text) {
+  if (window.emulator && window.emulator.sendToVT100) {
+    return window.emulator.sendToVT100(text);
+  } else {
+    console.error('Emulator not available or sendToVT100 function not found');
+    return 'Error: Emulator not ready';
+  }
+};
+
