@@ -50,10 +50,10 @@ A Zilog Z80 CPU emulator that runs CP/M 2.2 in modern web browsers. This emulato
 ### Visual Drive Interface
 The emulator displays four disk drives in the top-right corner:
 
-- **🖥️ A:** (dimmed) - Boot disk (CP/M 2.2) - **Read-only**
-- **💾 B:** (bright) - Microsoft BASIC - **Interactive**
-- **💾 C:** (bright) - Empty - **Interactive**  
-- **💾 D:** (bright) - Empty - **Interactive**
+- **A:** (dimmed) - Boot disk (CP/M 2.2) - **Read-only**
+- **B:** (bright) - Microsoft BASIC - **Interactive**
+- **C:** (bright) - Empty - **Interactive**  
+- **D:** (bright) - Empty - **Interactive**
 
 ### Mounting Your Own Disks
 
@@ -76,7 +76,7 @@ The emulator displays four disk drives in the top-right corner:
 3. **Save the file** to your computer
 4. **Your programs and data** are preserved
 
-## 🖥️ CP/M Usage
+## CP/M Usage
 
 ### Basic Commands
 ```bash
@@ -99,6 +99,70 @@ SAVE "MYPROG"    # Save your program
 LOAD "MYPROG"    # Load a saved program
 ```
 
+### Modern Development Workflow (PTR/PTP)
+
+**Skip the old CP/M text editors!** Use your modern text editor and drag-and-drop files:
+
+#### For C Programming:
+1. **Mount BDS C disk** - Click drive C or D, drag `bdsc1.dsk` and `bdsc2.dsk`
+2. **Write C code** - Use your favorite text editor (VS Code, Sublime, etc.)
+3. **Drag source file** - Drop your `.c` file onto the emulator window
+4. **Load into CP/M** - Use `r ptr:` to load the source file
+5. **Compile** - Switch to C: drive and run `CC filename.c`
+6. **Download result** - Use `ptp` to save the compiled program
+
+#### For BASIC Programming:
+1. **Write BASIC** - Use your modern text editor
+2. **Drag .bas file** - Drop onto emulator window  
+3. **Load into CP/M** - Use `r ptr:` to load the source
+4. **Run in BASIC** - Start `B:MBASIC` and use `LOAD "filename"`
+5. **Save modified** - Use `SAVE "filename"` then `ptp` to download
+
+#### Example C Workflow:
+```bash
+# 1. Write hello.c in your editor
+# 2. Drag hello.c onto emulator
+# 3. Load source into CP/M
+r ptr:
+
+# 4. Switch to C: drive (BDS C compiler)
+C:
+
+# 5. Compile the program
+CC HELLO.C
+
+# 6. Download the compiled program
+ptp hello.com
+```
+
+#### Example BASIC Workflow:
+```bash
+# 1. Write program.bas in your editor
+# 2. Drag program.bas onto emulator
+# 3. Load into CP/M
+r ptr:
+
+# 4. Start BASIC
+B:MBASIC
+
+# 5. Load and run
+LOAD "PROGRAM"
+RUN
+
+# 6. Save and download
+SAVE "PROGRAM"
+# Exit BASIC with BYE
+BYE
+ptp program.bas
+```
+
+**Benefits:**
+- ✅ Use modern text editors with syntax highlighting
+- ✅ Copy/paste from tutorials and examples
+- ✅ Version control with Git
+- ✅ No need to learn CP/M text editors
+- ✅ Easy file transfer between modern and vintage systems
+
 ### File Management
 ```bash
 DIR              # List files
@@ -106,6 +170,86 @@ ERA FILENAME.COM # Delete a file
 REN NEWNAME.COM=OLDNAME.COM  # Rename a file
 TYPE FILENAME.TXT # Display a text file
 ```
+
+## 📄 Paper Tape Devices (PTR/PTP)
+
+The emulator includes virtual paper tape reader (PTR) and paper tape punch (PTP) devices for loading and saving programs.
+
+### Paper Tape Reader (PTR)
+**Purpose:** Load Intel HEX programs from virtual paper tape
+
+**How to use:**
+1. **Mount a tape** - Drag and drop any file onto the emulator window
+2. **Load the program** - Use `r ptr:` command to load Intel HEX from tape
+3. **Run the program** - Use `g <address>` to execute
+
+**Example workflow:**
+```bash
+# 1. Drag a .hex file onto the emulator window
+# 2. Load the program from tape
+r ptr:
+
+# 3. Run the program (address shown in output)
+g 100
+```
+
+### Paper Tape Punch (PTP)
+**Purpose:** Save program output to virtual paper tape
+
+**How to use:**
+1. **Clear the punch** - Use `ptp filename` to start a new punch file
+2. **Run programs** - Programs can output to the punch device
+3. **Download the tape** - Use `ptp` command to save the punched data
+
+**Example workflow:**
+```bash
+# 1. Start a new punch file
+ptp myprogram.hex
+
+# 2. Run a program that outputs to punch
+# (Some CP/M programs can punch Intel HEX)
+
+# 3. Download the punched data
+ptp
+# This opens a save window with the punched data
+```
+
+### Tape Commands
+```bash
+rew              # Rewind the paper tape reader
+io               # Show tape status (name, length, position)
+r ptr:           # Read Intel HEX from tape into memory
+r ptp:           # Read Intel HEX from punch into memory
+ptp [filename]   # Start new punch file or download current punch
+```
+
+### Technical Details
+- **PTR (Port 5 input):** Reads characters from mounted tape file
+- **PTP (Port 5 output):** Accumulates characters into punch buffer
+- **Tape format:** Any file can be mounted, but Intel HEX format is most useful
+- **Position tracking:** Tape reader tracks current position, can be rewound
+- **EOF handling:** Returns CTRL-Z (0x1A) when tape reaches end
+
+### Server Integration
+The `ptp` and `dsk` commands can send data to a server for processing:
+
+**Current behavior:** Opens a form window with:
+- **URL field:** Default `http://localhost/cgi-bin/savefile`
+- **Content field:** The punched data or disk image
+- **Submit button:** Sends data to server
+
+**Backend requirements:** You'll need a server script to handle the POST data:
+```bash
+# Example CGI script (savefile.cgi)
+#!/bin/bash
+echo "Content-Type: text/plain"
+echo ""
+read POST_DATA
+echo "$POST_DATA" > /tmp/received_data
+echo "Data saved successfully"
+```
+
+**Note:** The server integration is optional - you can also save files locally using the browser's download functionality.
 
 ## 🔧 Developer Information
 
@@ -123,7 +267,7 @@ TYPE FILENAME.TXT # Display a text file
 **Auto-Boot Sequence:**
 ```javascript
 // Multi-step boot process
-1. Load emu-cpm22a.dsk into drive 0
+1. Load emu-cpm.dsk into drive 0
 2. Load mbasic.dsk into drive 1  
 3. Boot CP/M from drive 0
 4. Start execution
