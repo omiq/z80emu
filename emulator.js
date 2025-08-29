@@ -329,7 +329,7 @@ Emulator.prototype.updateDiskDriveIcons = function() {
 };
 
 Emulator.prototype.autoBootSequence = function() {
-  // Auto-boot sequence: equivalent to "r 0 emu-cpm.dsk", "r 1 mbasic.dsk", "b", "g"
+  // Auto-boot sequence: equivalent to "r 0 emu-cpm.dsk", "r 1 mbasic.dsk", "r 2 hitech-c.dsk", "b", "g"
   this.vt100("Loading CP/M 2.2 ... \r\n");
   this.vt100("\t   _____ _____   ____  __ \r\n");
   this.vt100("\t  / ____|  __ \\ / /  \\/  |\r\n");
@@ -861,6 +861,17 @@ Emulator.prototype.doWaitIO = function() {
           return false;
         } else if (this.autoBootStep === 2) {
           // Step 2 completed: mbasic.dsk loaded into drive 1
+          // Now load hitech-c.dsk into drive 2
+          this.autoBootStep = 3;
+          var file = "hitech-c.dsk";
+          this.io_op = 3; // netload of disc image
+          this.loaddrv = 2;
+          this.loaddrvurl = file;
+          this.netload(file);
+          this.gotoState(7 /* STATE_IOWAIT */);
+          return false;
+        } else if (this.autoBootStep === 3) {
+          // Step 3 completed: hitech-c.dsk loaded into drive 2
           // Now proceed with booting CP/M
           this.autoBooting = false;
           // this.vt100("Disks loaded, verifying sectors...\r\n");
