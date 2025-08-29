@@ -67,8 +67,11 @@ The emulator displays four disk drives in the top-right corner:
 
 ### Supported Disk Formats
 - **8" SSSD CP/M disks** (250KB, 77 tracks × 26 sectors × 128 bytes)
-- **Standard .dsk files** compatible with CP/M emulators
-- **Any CP/M disk image** that matches the 250KB format
+- **8" DDDD CP/M disks** (500KB, 77 tracks × 52 sectors × 128 bytes)
+- **5.25" DDDD CP/M disks** (260KB, 40 tracks × 52 sectors × 128 bytes)
+- **Hard disk images** (32MB, 1024 tracks × 256 sectors × 128 bytes)
+- **Custom disk sizes** - Auto-detected based on file size
+- **Standard .dsk, .hdd, .img files** compatible with CP/M emulators
 
 ### Downloading Modified Disks
 1. **Click any drive icon** (B, C, or D)
@@ -343,14 +346,20 @@ z80emu/
 # Compile the CP/M filesystem utility
 gcc -o cpmfs cpmfs.c
 
-# Create a new disk image
-./cpmfs newdisk.dsk make
+# Create different disk types
+./cpmfs -t 8sssd disk.dsk make    # 250KB standard CP/M
+./cpmfs -t 8dddd disk.dsk make    # 500KB double density
+./cpmfs -t 5dddd disk.dsk make    # 260KB 5.25" format
+./cpmfs -t hdd disk.dsk make      # 32MB hard disk
 
-# Add files to the disk
-./cpmfs newdisk.dsk w filename.com filename.com
+# Add files to the disk (supports wildcards!)
+./cpmfs disk.dsk w filename.com filename.com
+./cpmfs disk.dsk w "*.txt"        # Add all .txt files
+./cpmfs disk.dsk w "test*"        # Add all files starting with "test"
+./cpmfs disk.dsk w "*"            # Add all files in directory
 
 # List files on the disk
-./cpmfs newdisk.dsk dir
+./cpmfs disk.dsk dir
 ```
 
 ### Deployment
@@ -415,6 +424,9 @@ debug 100       # Show first 16 bytes at address 0x100
 - **Error Handling** - Better error messages and recovery
 - **Performance** - Optimized disk I/O and memory management
 - **Accessibility** - Improved keyboard navigation and screen reader support
+- **Auto-Disk Detection** - Automatically detects disk geometry from file size
+- **Wildcard Support** - Add multiple files to disks using patterns like `*.txt`
+- **Large Disk Support** - Support for 500KB, 260KB, and 32MB disk formats
 
 ## 📄 License
 

@@ -551,7 +551,7 @@ Emulator.prototype.doCommand = function() {
 	break;
       }
       var file = parms[2];
-      if (! file.match(/.dsk$/)) file += ".dsk";
+      if (! file.match(/\.(dsk|hdd|img)$/)) file += ".dsk";
       file= "../disks/"+file;
       this.vt100("loading image "  + file + "..");
       this.io_op = 3; // netload of disc image
@@ -1174,16 +1174,23 @@ Emulator.prototype.handleDskDrop = function(evt, div, divname, drv) {
   div.innerHTML = "loading " + fname;
   var reader = new FileReader();
   reader.onload = function(vt, f, m, n, d) { return function(e) {
-      if (e.target.result.length
-	  != vt.memio.drives[d].tracks * vt.memio.drives[d].sectors * 128) {
-	m.innerHTML = f + " wrong file format error";
+      // Auto-detect disk geometry based on file size
+      var geometry = vt.memio.detectDiskGeometry(e.target.result.length);
+      if (!geometry) {
+	m.innerHTML = f + " unsupported disk format (size: " + e.target.result.length + " bytes)";
 	return false;
       }
-      m.innerHTML = "mounting " + fname + " on dsk" + d +", please wait...";
+      
+      // Update drive geometry for this load
+      vt.memio.drives[d].tracks = geometry.tracks;
+      vt.memio.drives[d].sectors = geometry.sectors;
+      vt.memio.drives[d].name = f;
+      
+      m.innerHTML = "mounting " + fname + " (" + geometry.name + ") on dsk" + d +", please wait...";
       vt.memio.writeCompleteCB = function(res) {
         if (res) {
 	  n.innerHTML = f;
-	  m.innerHTML = "mounted succesfully.";
+	  m.innerHTML = "mounted successfully (" + geometry.name + ").";
 	  // Update disk drive icons to reflect the new mount
 	  vt.updateDiskDriveIcons();
 	} else {
@@ -1248,14 +1255,22 @@ Emulator.prototype.handleDiskIconDrop = function(evt, driveNum) {
   var reader = new FileReader();
   var emulator = this;
   reader.onload = function(e) {
-    if (e.target.result.length != emulator.memio.drives[driveNum].tracks * emulator.memio.drives[driveNum].sectors * 128) {
-      emulator.showPopUp(fname + " wrong file format error", 2000);
+    // Auto-detect disk geometry based on file size
+    var geometry = emulator.memio.detectDiskGeometry(e.target.result.length);
+    if (!geometry) {
+      emulator.showPopUp(fname + " unsupported disk format (size: " + e.target.result.length + " bytes)", 2000);
       return false;
     }
-    emulator.showPopUp("mounting " + fname + " on drive " + String.fromCharCode(65 + driveNum) + ", please wait...", 1000);
+    
+    // Update drive geometry for this load
+    emulator.memio.drives[driveNum].tracks = geometry.tracks;
+    emulator.memio.drives[driveNum].sectors = geometry.sectors;
+    emulator.memio.drives[driveNum].name = fname;
+    
+    emulator.showPopUp("mounting " + fname + " (" + geometry.name + ") on drive " + String.fromCharCode(65 + driveNum) + ", please wait...", 1000);
     emulator.memio.writeCompleteCB = function(res) {
       if (res) {
-        emulator.showPopUp(fname + " mounted successfully on drive " + String.fromCharCode(65 + driveNum), 2000);
+        emulator.showPopUp(fname + " (" + geometry.name + ") mounted successfully on drive " + String.fromCharCode(65 + driveNum), 2000);
         // Update disk drive icons to reflect the new mount
         emulator.updateDiskDriveIcons();
       } else {

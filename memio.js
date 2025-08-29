@@ -49,10 +49,10 @@ function Memio(conso, consi, conss, prn)
   this.dskstat = 0; // diskstatus
   this.iocount = 0; // number of pending requests
   this.writeCompleteCB = null; // will be called after drive formatting
-  this.drives = [{tracks:77, sectors:26, name:"dsk0.cpm"},
-                 {tracks:77, sectors:26, name:"dsk1.cpm"},
-                 {tracks:77, sectors:26, name:"dsk2.cpm"},
-                 {tracks:77, sectors:26, name:"dsk3.cpm"}];
+  this.drives = [{tracks:77, sectors:26, name:"dsk0.cpm", geometry:"auto"},
+                 {tracks:77, sectors:26, name:"dsk1.cpm", geometry:"auto"},
+                 {tracks:77, sectors:26, name:"dsk2.cpm", geometry:"auto"},
+                 {tracks:77, sectors:26, name:"dsk3.cpm", geometry:"auto"}];
 
   this.cBuf= new Array(128); // for 4FDC
   this.cNxt= 0;
@@ -70,6 +70,37 @@ function Memio(conso, consi, conss, prn)
   this.initPuncher();
   this.dumpdata = "";
 }
+
+// Detect disk geometry based on file size
+Memio.prototype.detectDiskGeometry = function(fileSize) {
+  // Standard CP/M 2.2: 77×26×128 = 250KB
+  if (fileSize === 77 * 26 * 128) {
+    return { tracks: 77, sectors: 26, name: "CP/M 2.2 (250KB)", type: "8sssd" };
+  }
+  // Double density 8": 77×52×128 = 500KB  
+  else if (fileSize === 77 * 52 * 128) {
+    return { tracks: 77, sectors: 52, name: "CP/M Double Density (500KB)", type: "8dddd" };
+  }
+  // 5.25" double density: 40×52×128 = 260KB
+  else if (fileSize === 40 * 52 * 128) {
+    return { tracks: 40, sectors: 52, name: "CP/M 5.25\" DD (260KB)", type: "5dddd" };
+  }
+  // Hard disk: 1024×256×128 = 32MB
+  else if (fileSize === 1024 * 256 * 128) {
+    return { tracks: 1024, sectors: 256, name: "CP/M Hard Disk (32MB)", type: "hdd" };
+  }
+  // Custom size - calculate based on file size
+  else if (fileSize % 128 === 0) {
+    var totalSectors = Math.floor(fileSize / 128);
+    var tracks = Math.ceil(Math.sqrt(totalSectors));
+    var sectors = Math.ceil(totalSectors / tracks);
+    return { tracks: tracks, sectors: sectors, name: "Custom Size (" + Math.round(fileSize/1024) + "KB)", type: "custom" };
+  }
+  // Invalid size
+  else {
+    return null;
+  }
+};
 
 Memio.prototype.rd = function(a) {
   return this.ram[a];

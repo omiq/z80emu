@@ -29,8 +29,47 @@
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>  // for strcasecmp on macOS/Linux
+#include <dirent.h>   // for directory operations
+#include <sys/stat.h> // for file stats
 
 #define toupper(c) (('a'<=c && c<='z')? c+'A'-'a' : c)
+
+// Simple wildcard pattern matching
+int matchPattern(const char *pattern, const char *string) {
+    if (!pattern || !string) return 0;
+    
+    // Handle exact match
+    if (strcmp(pattern, string) == 0) return 1;
+    
+    // Handle * wildcard (matches any sequence)
+    if (strcmp(pattern, "*") == 0) return 1;
+    
+    // Handle *pattern (ends with pattern)
+    if (pattern[0] == '*' && pattern[1] != '\0') {
+        int patternLen = strlen(pattern) - 1;
+        int stringLen = strlen(string);
+        if (stringLen >= patternLen) {
+            return strcasecmp(pattern + 1, string + stringLen - patternLen) == 0;
+        }
+        return 0;
+    }
+    
+    // Handle pattern* (starts with pattern)
+    if (pattern[strlen(pattern) - 1] == '*' && strlen(pattern) > 1) {
+        int patternLen = strlen(pattern) - 1;
+        return strncasecmp(pattern, string, patternLen) == 0;
+    }
+    
+    // Handle *pattern* (contains pattern)
+    if (pattern[0] == '*' && pattern[strlen(pattern) - 1] == '*' && strlen(pattern) > 2) {
+        char tempPattern[256];
+        strncpy(tempPattern, pattern + 1, sizeof(tempPattern) - 1);
+        tempPattern[strlen(tempPattern) - 1] = '\0';
+        return strstr(string, tempPattern) != NULL;
+    }
+    
+    return 0;
+}
 
 typedef struct {
     int tracks;
@@ -88,6 +127,111 @@ int type8sssd(DSKFMT *d) {  // standard cpm 8" disk type
         d->trans[i]= trans[i]; // (i*6)%d->sectors;  // skew of 6
     }
     return 0;
+}
+
+int type8dddd(DSKFMT *d) {  // double density 8" disk type
+    int i;
+    int trans[] = {
+         1, 7,13,19, 25, 31, 37, 43, 49, 55, 5,11,17, 23, 29, 35, 41, 47, 53, 3, 9,15, 21, 27, 33, 39, 45, 51, 2, 8,14, 20, 26, 32, 38, 44, 50, 6,12, 18, 24, 30, 36, 42, 48, 54, 4,10, 16, 22, 28, 34, 40, 46, 52 }; // sectors 1-52
+
+    d->tracks = 77;
+    d->sectors = 52;
+    d->secsize = 128;
+    d->rsvd = 2;
+    d->spb = 8;  // 1K blocks
+    d->dir = 2;  // 16x4 = 64 directory entries
+    d->skew = 6;
+    d->trans= (int *)malloc(d->sectors*sizeof(int));
+    for (i=0; i<d->sectors; i++) {
+        d->trans[i]= trans[i];
+    }
+    return 0;
+}
+
+int type5dddd(DSKFMT *d) {  // double density 5.25" disk type
+    int i;
+    int trans[] = {
+         1, 7,13,19, 25, 31, 37, 43, 49, 55, 5,11,17, 23, 29, 35, 41, 47, 53, 3, 9,15, 21, 27, 33, 39, 45, 51, 2, 8,14, 20, 26, 32, 38, 44, 50, 6,12, 18, 24, 30, 36, 42, 48, 54, 4,10, 16, 22, 28, 34, 40, 46, 52 }; // sectors 1-52
+
+    d->tracks = 40;
+    d->sectors = 52;
+    d->secsize = 128;
+    d->rsvd = 2;
+    d->spb = 8;  // 1K blocks
+    d->dir = 2;  // 16x4 = 64 directory entries
+    d->skew = 6;
+    d->trans= (int *)malloc(d->sectors*sizeof(int));
+    for (i=0; i<d->sectors; i++) {
+        d->trans[i]= trans[i];
+    }
+    return 0;
+}
+
+int typeHardDisk(DSKFMT *d) {  // hard disk type
+    int i;
+    
+    d->tracks = 1024;
+    d->sectors = 256;
+    d->secsize = 128;
+    d->rsvd = 2;
+    d->spb = 8;  // 1K blocks
+    d->dir = 64; // 512x4 = 2048 directory entries
+    d->skew = 1;
+    d->trans= (int *)malloc(d->sectors*sizeof(int));
+    for (i=0; i<d->sectors; i++) {
+        d->trans[i]= i+1; // no skew for hard disk
+    }
+    return 0;
+}
+
+// Get list of files matching a pattern
+int getMatchingFiles(const char *pattern, char **fileList, int maxFiles) {
+    DIR *dir;
+    struct dirent *entry;
+    int count = 0;
+    char *currentDir = ".";
+    
+    // If pattern contains a path, extract directory
+    char dirPath[256] = ".";
+    char filePattern[256];
+    const char *lastSlash = strrchr(pattern, '/');
+    
+    if (lastSlash) {
+        int dirLen = lastSlash - pattern;
+        strncpy(dirPath, pattern, dirLen);
+        dirPath[dirLen] = '\0';
+        strcpy(filePattern, lastSlash + 1);
+    } else {
+        strcpy(filePattern, pattern);
+    }
+    
+    dir = opendir(dirPath);
+    if (!dir) {
+        printf("Error: cannot open directory '%s'\n", dirPath);
+        return 0;
+    }
+    
+    while ((entry = readdir(dir)) != NULL && count < maxFiles) {
+        // Skip directories and hidden files
+        if (entry->d_type == DT_DIR || entry->d_name[0] == '.') {
+            continue;
+        }
+        
+        // Check if file matches pattern
+        if (matchPattern(filePattern, entry->d_name)) {
+            // Allocate memory for full path
+            fileList[count] = malloc(strlen(dirPath) + strlen(entry->d_name) + 2);
+            if (strcmp(dirPath, ".") == 0) {
+                strcpy(fileList[count], entry->d_name);
+            } else {
+                sprintf(fileList[count], "%s/%s", dirPath, entry->d_name);
+            }
+            count++;
+        }
+    }
+    
+    closedir(dir);
+    return count;
 }
 
 ///////
@@ -594,11 +738,91 @@ int fsWrite(DSKFMT *d, char *imgfn, char *cpmfn, char *winfn) {
     return 0;
 }
 
+int fsWriteWildcard(DSKFMT *d, char *imgfn, char *pattern, char *winfn) {
+    char *fileList[1000]; // Support up to 1000 files
+    int fileCount, i;
+    int successCount = 0;
+    int totalCount = 0;
+    
+    printf("Searching for files matching pattern: %s\n", pattern);
+    
+    // Get list of matching files
+    fileCount = getMatchingFiles(pattern, fileList, 1000);
+    
+    if (fileCount == 0) {
+        printf("No files found matching pattern: %s\n", pattern);
+        return 1;
+    }
+    
+    printf("Found %d files matching pattern.\n", fileCount);
+    
+    // Write each file to the disk
+    for (i = 0; i < fileCount; i++) {
+        char cpmName[13];
+        char *fileName = fileList[i];
+        char *baseName = strrchr(fileName, '/');
+        
+        if (baseName) {
+            baseName++; // Skip the '/'
+        } else {
+            baseName = fileName;
+        }
+        
+        // Convert to CP/M filename (8.3 format)
+        char *ext = strrchr(baseName, '.');
+        if (ext && ext != baseName) {
+            // Has extension
+            int nameLen = ext - baseName;
+            if (nameLen > 8) nameLen = 8;
+            strncpy(cpmName, baseName, nameLen);
+            cpmName[nameLen] = '\0';
+            strcat(cpmName, ".");
+            strncat(cpmName, ext + 1, 3);
+        } else {
+            // No extension
+            strncpy(cpmName, baseName, 8);
+            cpmName[8] = '\0';
+        }
+        
+        // Convert to uppercase and replace invalid chars
+        for (int j = 0; cpmName[j]; j++) {
+            if (cpmName[j] >= 'a' && cpmName[j] <= 'z') {
+                cpmName[j] = cpmName[j] - 'a' + 'A';
+            }
+            if (cpmName[j] == '-' || cpmName[j] == '_') {
+                cpmName[j] = 'X';
+            }
+        }
+        
+        printf("Writing %s as %s... ", fileName, cpmName);
+        
+        // Write the file
+        if (fsWrite(d, imgfn, cpmName, fileName) == 0) {
+            printf("OK\n");
+            successCount++;
+        } else {
+            printf("FAILED\n");
+        }
+        
+        totalCount++;
+        
+        // Free the allocated memory
+        free(fileList[i]);
+    }
+    
+    printf("Wildcard write complete: %d/%d files written successfully.\n", successCount, totalCount);
+    return (successCount == totalCount) ? 0 : 1;
+}
+
 void Usage(void) {
     printf("\n");
     printf("CP/M File System Utility Ver 0.01\n");
     printf("Copyright 2017 Sydneysmith.com\n\n");
     printf("Usage: cpmfs [-t type] imagefile cmd [fn1 [fn2]]\n");
+    printf("Types: 8sssd     : 8\" single sided single density (77x26x128 = 250KB)\n");
+    printf("       8dddd     : 8\" double sided double density (77x52x128 = 500KB)\n");
+    printf("       5dddd     : 5.25\" double sided double density (40x52x128 = 260KB)\n");
+    printf("       hdd       : Hard disk (1024x256x128 = 32MB)\n");
     printf("cmd: make        : create imagefile\n");
     printf("     init        : reset  imagefile to empty\n");
     printf("     rsys fn1    : read   system tracks -> win fn1\n");
@@ -607,6 +831,9 @@ void Usage(void) {
     printf("     era fn1     : erase  cpm file fn1\n");
     printf("     r fn1 [fn2] : read   cpm fn1 -> win fn2\n");
     printf("     w fn1 [fn2] : write  cpm fn1 <- win fn2\n");
+    printf("     w * [fn2]   : write  all files matching pattern <- win fn2\n");
+    printf("     w *.txt     : write  all .txt files to disk\n");
+    printf("     w test*     : write  all files starting with 'test'\n");
     printf("Default fn2 is same name as fn1\n");
 }
 
@@ -616,9 +843,22 @@ int main(int argc, char *argv[]) {
     char *cmds[] = {
         "make", "init", "rsys", "wsys", "dir", "era", "r", "w", NULL };
     
-    type8sssd(&d);
+    type8sssd(&d); // default type
     if (argc>2 && strcmp(argv[1],"-t")==0) {
-        ; // change type
+        if (argc<4) { Usage(); return 1; }
+        if (strcasecmp(argv[2],"8sssd")==0) {
+            type8sssd(&d);
+        } else if (strcasecmp(argv[2],"8dddd")==0) {
+            type8dddd(&d);
+        } else if (strcasecmp(argv[2],"5dddd")==0) {
+            type5dddd(&d);
+        } else if (strcasecmp(argv[2],"hdd")==0) {
+            typeHardDisk(&d);
+        } else {
+            printf("Error: unknown disk type '%s'\n", argv[2]);
+            Usage();
+            return 1;
+        }
         argc-=2;
         argv+=2;
     }
@@ -636,7 +876,12 @@ int main(int argc, char *argv[]) {
     case  6: if (argc==5) return fsRead(    &d,argv[1],argv[3],argv[4]);
              if (argc==4) return fsRead(    &d,argv[1],argv[3],argv[3]);
              break;
-    case  7: if (argc==5) return fsWrite(   &d,argv[1],argv[3],argv[4]);
+    case  7: 
+             // Check if this is a wildcard pattern
+             if (argc==4 && (strchr(argv[3], '*') != NULL)) {
+                 return fsWriteWildcard(&d, argv[1], argv[3], argv[3]);
+             }
+             if (argc==5) return fsWrite(   &d,argv[1],argv[3],argv[4]);
              if (argc==4) return fsWrite(   &d,argv[1],argv[3],argv[3]);
              break;
     }
