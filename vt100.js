@@ -185,8 +185,7 @@ function VT100(container) {
     console.log('scrollable.offsetWidth:', this.scrollable.offsetWidth);
     console.log('scrollable.clientWidth:', this.scrollable.clientWidth);
     console.log('scrollable.scrollWidth:', this.scrollable.scrollWidth);
-    console.log('Expected width: 680px');
-    console.log('Width difference:', this.scrollable.offsetWidth - 680, 'px');
+    console.log('Auto width mode - actual width:', this.scrollable.offsetWidth, 'px');
     console.log('cursor.style.top:', this.cursor.style.top);
     console.log('cursor.style.left:', this.cursor.style.left);
     console.log('cursor.style.visibility:', this.cursor.style.visibility);
@@ -211,8 +210,8 @@ function VT100(container) {
   // Add function to fix container dimensions
   window.fixContainerDimensions = function() {
     if (this.scrollable) {
-      this.scrollable.style.width = '680px';
-      this.scrollable.style.maxWidth = '680px';
+      this.scrollable.style.width = 'auto';
+      this.scrollable.style.maxWidth = 'none';
       this.scrollable.style.overflow = 'hidden';
       this.scrollable.style.position = 'relative';
       this.scrollable.style.left = '0px';
@@ -277,8 +276,8 @@ VT100.prototype.reset = function(clearHistory) {
   
   // Fix container dimensions after initialization
   if (this.scrollable) {
-    this.scrollable.style.width = '680px';
-    this.scrollable.style.maxWidth = '680px';
+    this.scrollable.style.width = 'auto';
+    this.scrollable.style.maxWidth = 'none';
     this.scrollable.style.overflow = 'hidden';
     this.scrollable.style.position = 'relative';
     this.scrollable.style.left = '0px';
@@ -500,8 +499,8 @@ VT100.prototype.getUserSettings = function() {
   
   // Force container width and positioning to prevent expansion
   if (this.scrollable) {
-    this.scrollable.style.width = '680px';
-    this.scrollable.style.maxWidth = '680px';
+    this.scrollable.style.width = 'auto';
+    this.scrollable.style.maxWidth = 'none';
     this.scrollable.style.overflow = 'hidden';
     this.scrollable.style.position = 'relative';
     this.scrollable.style.left = '0px';
@@ -759,7 +758,7 @@ VT100.prototype.initializeElements = function(container) {
   // Remember the dimensions of a standard character glyph. We would
   // expect that we could just check cursor.clientWidth/Height at any time,
   // Fixed pixel dimensions for consistent positioning
-  this.cursorWidth             = 7;  // Fixed character width in pixels (6px character + 1px gap)
+  this.cursorWidth             = 8;  // Fixed character width in pixels (7px character + 1px gap)
   this.cursorHeight            = 20; // Fixed character height in pixels
 
   // IE has a slightly different boxing model, that we need to compensate for
@@ -1667,8 +1666,8 @@ VT100.prototype.putString = function(x, y, text, color, style) {
     }
   }
   // Always use consistent cursor positioning
-  this.cursor.style.left = (originalX * 7 + 20) + 'px'; // Fixed pixel dimensions: 7px per column + 20px padding
-  window.console.log('putString: originalX=' + originalX + ', cursorX=' + this.cursorX + ', calculated left=' + (originalX * 7 + 20) + 'px, actual left=' + this.cursor.style.left);
+  this.cursor.style.left = (originalX * 8 + 20) + 'px'; // Fixed pixel dimensions: 8px per column + 20px padding
+      window.console.log('putString: originalX=' + originalX + ', cursorX=' + this.cursorX + ', calculated left=' + (originalX * 8 + 20) + 'px, actual left=' + this.cursor.style.left);
   // Calculate the actual cursor position relative to the visible terminal
   this.cursorY                      = yIdx - this.numScrollbackLines;
   // Ensure cursor stays within the visible terminal area
@@ -1769,8 +1768,8 @@ VT100.prototype.gotoXY = function(x, y) {
               var calculatedTop = (visibleY * 20 + 20); // Fixed pixel dimensions: 20px per row + 20px padding
               this.cursor.style.top = calculatedTop + 'px';
               
-              // Fixed pixel dimensions: 7px per column + 20px padding
-              this.cursor.style.left = (this.cursorX * 7 + 20) + 'px';
+              // Fixed pixel dimensions: 8px per column + 20px padding
+              this.cursor.style.left = (this.cursorX * 8 + 20) + 'px';
   
   this.needWrap = false;
 };
@@ -1842,7 +1841,7 @@ VT100.prototype.showCursor = function(x, y) {
     // Position cursor at the correct line with padding offset and baseline alignment
     this.cursor.style.top = (this.cursorY * 20 + 20) + 'px'; // Fixed pixel dimensions: 20px per row + 20px padding
     // Use the same X positioning logic as putString when pixelX < 0
-    this.cursor.style.left = (this.cursorX * 7 + 20) + 'px'; // Fixed pixel dimensions: 7px per column + 20px padding
+    this.cursor.style.left = (this.cursorX * 8 + 20) + 'px'; // Fixed pixel dimensions: 8px per column + 20px padding
     }
     return true;
   }
@@ -2198,9 +2197,9 @@ VT100.prototype.applyTextWrapMode = function() {
     scrollable.style.maxWidth = 'none';
     scrollable.style.overflow = 'auto';
   } else {
-    // Disable wrapping - restore fixed 80-column width
-    scrollable.style.width = '680px';
-    scrollable.style.maxWidth = '680px';
+    // Disable wrapping - use same width as wrapping mode but with hidden overflow
+    scrollable.style.width = 'auto';
+    scrollable.style.maxWidth = 'none';
     scrollable.style.overflow = 'hidden';
   }
   
@@ -3059,7 +3058,7 @@ VT100.prototype.lf = function(count) {
     // Update cursor visual position using unified positioning logic
     // Position cursor at the correct line with padding offset and baseline alignment
     this.cursor.style.top = (this.cursorY * 20 + 20) + 'px'; // Fixed pixel dimensions: 20px per row + 20px padding
-    this.cursor.style.left = (this.cursorX * 7 + 20) + 'px'; // Fixed pixel dimensions: 7px per column + 20px padding
+    this.cursor.style.left = (this.cursorX * 8 + 20) + 'px'; // Fixed pixel dimensions: 8px per column + 20px padding
   }
   window.console.log('LF finished: cursorY=' + this.cursorY);
   this.needWrap = false; // Reset wrap flag after line feed
