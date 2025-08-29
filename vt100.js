@@ -1774,18 +1774,35 @@ VT100.prototype.updateCursorPosition = function(x, y) {
   // Calculate pixel position using consistent formula
   // 20px padding + (row * 20px character height)
   var pixelY = 20 + (this.cursorY * 20);
-  // 20px padding + (column * 8px character width)
-  var pixelX = 20 + (this.cursorX * 8);
+  
+  // Measure actual character width if we have a test element
+  var actualCharWidth = 8; // Default fallback
+  if (this.console && this.console[this.currentScreen] && this.console[this.currentScreen].firstChild) {
+    var testLine = this.console[this.currentScreen].firstChild;
+    if (testLine.firstChild) {
+      var testSpan = testLine.firstChild;
+      var testText = this.getTextContent(testSpan);
+      if (testText.length > 0) {
+        actualCharWidth = testSpan.offsetWidth / testText.length;
+      }
+    }
+  }
+  
+  // Use actual character width for positioning
+  var pixelX = 20 + (this.cursorX * actualCharWidth);
   
   // Apply positioning
   this.cursor.style.top = pixelY + 'px';
   this.cursor.style.left = pixelX + 'px';
   
+  // Force reflow to ensure visual update
+  this.cursor.offsetHeight;
+  
   // Ensure cursor is visible
   this.cursor.style.visibility = '';
   
   // Debug logging
-  console.log('updateCursorPosition: cursorX=' + this.cursorX + ', cursorY=' + this.cursorY + ', pixelX=' + pixelX + ', pixelY=' + pixelY);
+  console.log('updateCursorPosition: cursorX=' + this.cursorX + ', cursorY=' + this.cursorY + ', pixelX=' + pixelX + ', pixelY=' + pixelY + ', actualCharWidth=' + actualCharWidth);
 };
 
 VT100.prototype.showCursor = function(x, y) {
