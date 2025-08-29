@@ -141,9 +141,9 @@ function VT100(container) {
       if (vt100.textWrapMode) {
         vt100.updateWidth();
       }
-      // Reposition cursor after resize
+      // Reposition cursor after resize using current coordinates
       if (vt100.cursor.style.visibility != 'hidden') {
-        vt100.showCursor();
+        vt100.updateCursorPosition(vt100.cursorX, vt100.cursorY);
       }
     };
   }(this);
@@ -1038,6 +1038,11 @@ VT100.prototype.resizer = function() {
   this.putString(cx, cy, '', undefined);
   this.scrollable.scrollTop    = this.numScrollbackLines *
                                  this.cursorHeight + 1;
+  
+  // Reposition cursor after resize using current coordinates
+  if (this.cursor.style.visibility != 'hidden') {
+    this.updateCursorPosition(this.cursorX, this.cursorY);
+  }
 
   // Update classNames for lines in the scrollback buffer
   var line                     = console.firstChild;
