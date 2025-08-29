@@ -237,18 +237,46 @@ Emulator.prototype.doInit = function() {
 };
 
 Emulator.prototype.initDiskDriveIcons = function() {
-  // Initialize disk drive icons with click handlers
+  // Initialize disk drive icons with click handlers and drag/drop functionality
   var emulator = this;
   
-  // Set up click handlers for each drive
+  // Set up click handlers and drag/drop handlers for each drive
   for (var i = 0; i < 4; i++) {
     var driveElement = document.getElementById('drive-' + String.fromCharCode(97 + i)); // a, b, c, d
     if (driveElement) {
+      // Click handler
       driveElement.addEventListener('click', function(driveNum) {
         return function() {
           emulator.handleDiskDriveClick(driveNum);
         };
       }(i));
+      
+      // Drag and drop handlers (only for drives B, C, D - not A which is locked)
+      if (i > 0) {
+        driveElement.addEventListener('dragenter', function(driveNum) {
+          return function(e) {
+            emulator.handleDiskIconDragEnter(e, driveNum);
+          };
+        }(i), false);
+        
+        driveElement.addEventListener('dragleave', function(driveNum) {
+          return function(e) {
+            emulator.handleDiskIconDragLeave(e, driveNum);
+          };
+        }(i), false);
+        
+        driveElement.addEventListener('dragover', function(driveNum) {
+          return function(e) {
+            emulator.cancelEvent(e);
+          };
+        }(i), false);
+        
+        driveElement.addEventListener('drop', function(driveNum) {
+          return function(e) {
+            emulator.handleDiskIconDrop(e, driveNum);
+          };
+        }(i), false);
+      }
     }
   }
   
@@ -1069,42 +1097,49 @@ onsubmit="window.close();">\
     w.document.write('</div>');
   }
 
-  for (var drv = 0; drv < 4; drv++) {
-    var div = w.document.getElementById("dsk"+drv);
-    var msg = w.document.getElementById("dsk"+drv+"msg");
-    var dname = w.document.getElementById("dsk"+drv+"name");
-    div.addEventListener("dragenter",
-        function(vt){var m=msg;return function(e){vt.handleDskDragS(e, m)}}(this), false);
-    div.addEventListener("dragleave",
-        function(vt){var m=msg;return function(e){vt.handleDskDragE(e, m)}}(this), false);
-    div.addEventListener("dragend",
-        function(vt){var m=msg;return function(e){vt.handleDskDragE(e, m)}}(this), false);
-    // for Chrome and Safari "dragover" must be cancelled so that "drop" works
-    // http://help.dottoro.com/ljbflwps.php
-    div.addEventListener("dragover", this.cancelEvent, false);
-    div.addEventListener("drop",
-			 function(vt){var m=msg; var n=dname; var d=drv;
-          return function(e){vt.handleDskDrop(e, m, n, d)}
-	}(this), false);
-  }
-
   w.document.write(post);
-  // Wire up events in the new window
+  
+  // Wire up events in the new window - only do this once
   for (var drv = 1; drv < 4; drv++) {
     (function(vt, wref, d){
       var div = wref.document.getElementById("dsk"+d);
       var msg = wref.document.getElementById("dsk"+d+"msg");
       var dname = wref.document.getElementById("dsk"+d+"name");
       var dl = wref.document.getElementById("dsk"+d+"download");
-      div.addEventListener("dragenter", function(e){ vt.handleDskDragS(e, msg); }, false);
-      div.addEventListener("dragleave", function(e){ vt.handleDskDragE(e, msg); }, false);
-      div.addEventListener("dragend",   function(e){ vt.handleDskDragE(e, msg); }, false);
-      div.addEventListener("dragover", vt.cancelEvent, false);
-      div.addEventListener("drop", function(e){ vt.handleDskDrop(e, msg, dname, d); }, false);
-      dl.addEventListener("click", function(){
-        // Dump drive and open save window
-        vt.memio.dumpDisk(d, function(data){ vt.openPostWindow('dsk', vt.memio.drives[d].name, data); });
-      }, false);
+      
+      if (div) {
+        div.addEventListener("dragenter", function(e){ 
+          e.stopPropagation();
+          e.preventDefault();
+          vt.handleDskDragS(e, msg); 
+        }, false);
+        div.addEventListener("dragleave", function(e){ 
+          e.stopPropagation();
+          e.preventDefault();
+          vt.handleDskDragE(e, msg); 
+        }, false);
+        div.addEventListener("dragend", function(e){ 
+          e.stopPropagation();
+          e.preventDefault();
+          vt.handleDskDragE(e, msg); 
+        }, false);
+        div.addEventListener("dragover", function(e){ 
+          e.stopPropagation();
+          e.preventDefault();
+        }, false);
+        div.addEventListener("drop", function(e){ 
+          e.stopPropagation();
+          e.preventDefault();
+          vt.handleDskDrop(e, msg, dname, d); 
+        }, false);
+      }
+      
+      if (dl) {
+        dl.addEventListener("click", function(){
+          // Dump drive and open save window
+          vt.memio.dumpDisk(d, function(data){ vt.openPostWindow('dsk', vt.memio.drives[d].name, data); });
+        }, false);
+      }
     })(this, w, drv);
   }
   w.document.close();
@@ -1163,6 +1198,77 @@ Emulator.prototype.handleDskDrop = function(evt, div, divname, drv) {
       m.innerHTML = f + " file not readable error";
       return false;
     }}(this, div, fname);
+  reader.readAsBinaryString(files[0]);
+}
+
+// Additional drag and drop handlers for main disk drive icons
+Emulator.prototype.handleDiskIconDragEnter = function(evt, driveNum) {
+  evt.stopPropagation();
+  evt.preventDefault();
+  var driveElement = document.getElementById('drive-' + String.fromCharCode(97 + driveNum));
+  if (driveElement) {
+    driveElement.style.background = 'rgba(0, 255, 0, 0.2)';
+    driveElement.style.borderColor = '#00ff00';
+  }
+}
+
+Emulator.prototype.handleDiskIconDragLeave = function(evt, driveNum) {
+  evt.stopPropagation();
+  evt.preventDefault();
+  var driveElement = document.getElementById('drive-' + String.fromCharCode(97 + driveNum));
+  if (driveElement) {
+    driveElement.style.background = '';
+    driveElement.style.borderColor = '';
+  }
+}
+
+Emulator.prototype.handleDiskIconDrop = function(evt, driveNum) {
+  evt.stopPropagation();
+  evt.preventDefault();
+  
+  // Reset visual feedback
+  var driveElement = document.getElementById('drive-' + String.fromCharCode(97 + driveNum));
+  if (driveElement) {
+    driveElement.style.background = '';
+    driveElement.style.borderColor = '';
+  }
+  
+  var files = evt.dataTransfer.files;
+  if (files.length != 1) {
+    this.showPopUp("only mount one disk image file at a time", 2000);
+    return false;
+  }
+  
+  var fname = files[0].name;
+  if (!(typeof window["FileReader"] === "function")) {
+    this.showPopUp("ERROR -- FileReader not supported by your browser", 2000);
+    return false;
+  }
+  
+  this.showPopUp("loading " + fname + "...", 1000);
+  var reader = new FileReader();
+  var emulator = this;
+  reader.onload = function(e) {
+    if (e.target.result.length != emulator.memio.drives[driveNum].tracks * emulator.memio.drives[driveNum].sectors * 128) {
+      emulator.showPopUp(fname + " wrong file format error", 2000);
+      return false;
+    }
+    emulator.showPopUp("mounting " + fname + " on drive " + String.fromCharCode(65 + driveNum) + ", please wait...", 1000);
+    emulator.memio.writeCompleteCB = function(res) {
+      if (res) {
+        emulator.showPopUp(fname + " mounted successfully on drive " + String.fromCharCode(65 + driveNum), 2000);
+        // Update disk drive icons to reflect the new mount
+        emulator.updateDiskDriveIcons();
+      } else {
+        emulator.showPopUp(fname + " mount error", 2000);
+      }
+    };
+    emulator.memio.loadDriveBin(driveNum, fname, e.target.result);
+  };
+  reader.onerror = function(e) {
+    emulator.showPopUp(fname + " file not readable error", 2000);
+    return false;
+  };
   reader.readAsBinaryString(files[0]);
 }
 // vim: set shiftwidth=2 :
