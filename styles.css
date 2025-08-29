@@ -79,16 +79,42 @@ html, body {
   visibility:       hidden;
 }
 
-#vt100 #cxursor {
+#vt100 #cursor {
   position:         absolute;
   left:             0px;
   top:              0px;
   overflow:         hidden;
-  z-index:          1;
+  z-index:          10;
   width:            8px;      /* Fixed character width (7px character + 1px gap) */
   height:           20px;     /* Fixed character height */
-  background-color: #00ff00;  /* Default green background */
+  background-color: #00ff00;  /* Bright green background */
   color:            #000000;  /* Black text for contrast */
+  border:           none;
+  pointer-events:   none;     /* Prevent cursor from interfering with text selection */
+  animation:        blink 1s infinite;
+}
+
+/* Cursor blink animation */
+@keyframes blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+
+/* Cursor states */
+#vt100 #cursor.bright {
+  background-color: #00ff00;  /* Bright green */
+  opacity:          1;
+}
+
+#vt100 #cursor.dim {
+  background-color: #004400;  /* Dim green */
+  opacity:          0.7;
+}
+
+#vt100 #cursor.inactive {
+  background-color: transparent;
+  border:           1px solid #00ff00;
+  opacity:          0.5;
 }
 
 /* Disk Drive Icons */

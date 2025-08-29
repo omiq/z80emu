@@ -1622,75 +1622,16 @@ VT100.prototype.putString = function(x, y, text, color, style) {
     }
   }
 
-  // Position cursor using original x coordinate to avoid padding offset
-  this.cursorX                      = originalX + text.length;
-  if (this.cursorX >= this.terminalWidth) {
-    this.cursorX                    = this.terminalWidth - 1;
-    if (this.cursorX < 0) {
-      this.cursorX                  = 0;
-    }
+  // Calculate final cursor position after placing text
+  var finalCursorX = originalX + text.length;
+  if (finalCursorX >= this.terminalWidth) {
+    finalCursorX = this.terminalWidth - 1;
   }
-  var pixelX                        = -1;
-  var pixelY                        = -1;
-  if (!this.cursor.style.visibility) {
-    var idx                         = this.cursorX - xPos;
-    if (span) {
-      // If we are in a non-empty line, take the cursor Y position from the
-      // other elements in this line. If dealing with broken, non-proportional
-      // fonts, this is likely to yield better results.
-      pixelY                        = span.offsetTop +
-                                      span.offsetParent.offsetTop;
-      s                             = this.getTextContent(span);
-      var nxtIdx                    = idx - s.length;
-      if (nxtIdx < 0) {
-        this.setTextContent(this.cursor, s.charAt(idx));
-        pixelX                      = span.offsetLeft +
-                                      idx*span.offsetWidth / s.length;
-      } else {
-        if (nxtIdx == 0) {
-          pixelX                    = span.offsetLeft + span.offsetWidth;
-        }
-        if (span.nextSibling) {
-          s                         = this.getTextContent(span.nextSibling);
-          this.setTextContent(this.cursor, s.charAt(nxtIdx));
-          if (pixelX < 0) {
-            pixelX                  = span.nextSibling.offsetLeft +
-                                      nxtIdx*span.offsetWidth / s.length;
-          }
-        } else {
-          this.setTextContent(this.cursor, ' ');
-        }
-      }
-    } else {
-      this.setTextContent(this.cursor, ' ');
-    }
-  }
-  // Always use consistent cursor positioning
-  this.cursor.style.left = (originalX * 8 + 20) + 'px'; // Fixed pixel dimensions: 8px per column + 20px padding
-      window.console.log('putString: originalX=' + originalX + ', cursorX=' + this.cursorX + ', calculated left=' + (originalX * 8 + 20) + 'px, actual left=' + this.cursor.style.left);
-  // Calculate the actual cursor position relative to the visible terminal
-  this.cursorY                      = yIdx - this.numScrollbackLines;
-  // Ensure cursor stays within the visible terminal area
-  if (this.cursorY >= this.terminalHeight) {
-    this.cursorY = this.terminalHeight - 1;
-  }
-  if (this.cursorY < 0) {
-    this.cursorY = 0;
-  }
-  // Always use the same positioning logic regardless of pixelY value
-  var visibleY = this.cursorY;
-  // Calculate cursor position relative to the scrollable container
-  var scrollableTop = this.scrollable.offsetTop;
-  var scrollableLeft = this.scrollable.offsetLeft;
-  // Position cursor at the correct line with padding offset and baseline alignment
-  // Fixed pixel dimensions: 20px per row + 20px padding
-  var calculatedTop = (visibleY * 20 + 20);
-  window.console.log('putString: using unified positioning, visibleY=' + visibleY + ', setting top to ' + calculatedTop + 'px');
-  this.cursor.style.top = calculatedTop + 'px';
-
   
-  // Log final cursor position
-  window.console.log('putString: final cursor position - top: ' + this.cursor.style.top + ', left: ' + this.cursor.style.left);
+  // Update cursor position using unified positioning
+  this.cursorX = finalCursorX;
+  this.cursorY = yIdx - this.numScrollbackLines;
+  this.updateCursorPosition();
 
   if (text.length) {
     // Merge <span> with previous sibling, if styles are identical
@@ -1759,17 +1700,8 @@ VT100.prototype.gotoXY = function(x, y) {
     y           = minY;
   }
   
-  // Update cursor position
-  this.cursorX = x;
-  this.cursorY = y;
-  
-                // Use unified positioning logic instead of putString for cursor positioning
-              var visibleY = this.cursorY;
-              var calculatedTop = (visibleY * 20 + 20); // Fixed pixel dimensions: 20px per row + 20px padding
-              this.cursor.style.top = calculatedTop + 'px';
-              
-              // Fixed pixel dimensions: 8px per column + 20px padding
-              this.cursor.style.left = (this.cursorX * 8 + 20) + 'px';
+  // Update cursor position using unified positioning
+  this.updateCursorPosition(x, y);
   
   this.needWrap = false;
 };
@@ -1828,21 +1760,37 @@ VT100.prototype.hideCursor = function() {
   return false;
 };
 
+VT100.prototype.updateCursorPosition = function(x, y) {
+  // Update cursor coordinates if provided
+  if (x !== undefined) this.cursorX = x;
+  if (y !== undefined) this.cursorY = y;
+  
+  // Ensure cursor stays within bounds
+  if (this.cursorX >= this.terminalWidth) this.cursorX = this.terminalWidth - 1;
+  if (this.cursorX < 0) this.cursorX = 0;
+  if (this.cursorY >= this.terminalHeight) this.cursorY = this.terminalHeight - 1;
+  if (this.cursorY < 0) this.cursorY = 0;
+  
+  // Calculate pixel position using consistent formula
+  // 20px padding + (row * 20px character height)
+  var pixelY = 20 + (this.cursorY * 20);
+  // 20px padding + (column * 8px character width)
+  var pixelX = 20 + (this.cursorX * 8);
+  
+  // Apply positioning
+  this.cursor.style.top = pixelY + 'px';
+  this.cursor.style.left = pixelX + 'px';
+  
+  // Ensure cursor is visible
+  this.cursor.style.visibility = '';
+  
+  // Debug logging
+  console.log('updateCursorPosition: cursorX=' + this.cursorX + ', cursorY=' + this.cursorY + ', pixelX=' + pixelX + ', pixelY=' + pixelY);
+};
+
 VT100.prototype.showCursor = function(x, y) {
   if (this.cursor.style.visibility == 'hidden') {
-    this.cursor.style.visibility = '';
-    // Update cursor position without calling putString
-    if (x !== undefined || y !== undefined) {
-      var newX = x !== undefined ? x : this.cursorX;
-      var newY = y !== undefined ? y : this.cursorY;
-      this.cursorX = newX;
-      this.cursorY = newY;
-          // Update visual position using the same unified positioning logic as putString
-    // Position cursor at the correct line with padding offset and baseline alignment
-    this.cursor.style.top = (this.cursorY * 20 + 20) + 'px'; // Fixed pixel dimensions: 20px per row + 20px padding
-    // Use the same X positioning logic as putString when pixelX < 0
-    this.cursor.style.left = (this.cursorX * 8 + 20) + 'px'; // Fixed pixel dimensions: 8px per column + 20px padding
-    }
+    this.updateCursorPosition(x, y);
     return true;
   }
   return false;
@@ -3055,10 +3003,8 @@ VT100.prototype.lf = function(count) {
       // Just update cursor position without calling putString
       this.cursorY = this.cursorY + 1;
     }
-    // Update cursor visual position using unified positioning logic
-    // Position cursor at the correct line with padding offset and baseline alignment
-    this.cursor.style.top = (this.cursorY * 20 + 20) + 'px'; // Fixed pixel dimensions: 20px per row + 20px padding
-    this.cursor.style.left = (this.cursorX * 8 + 20) + 'px'; // Fixed pixel dimensions: 8px per column + 20px padding
+    // Update cursor visual position using unified positioning
+    this.updateCursorPosition();
   }
   window.console.log('LF finished: cursorY=' + this.cursorY);
   this.needWrap = false; // Reset wrap flag after line feed
