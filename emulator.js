@@ -331,7 +331,6 @@ Emulator.prototype.updateDiskDriveIcons = function() {
 Emulator.prototype.autoBootSequence = function() {
   // Auto-boot sequence: equivalent to "r 0 emu-cpm.dsk", "r 1 mbasic.dsk", "b", "g"
   this.vt100("Loading CP/M 2.2 ... \r\n");
-  this.vt100("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX@\r\n");
   this.vt100("\t   _____ _____   ____  __ \r\n");
   this.vt100("\t  / ____|  __ \\ / /  \\/  |\r\n");
   this.vt100("\t | |    | |__) / /| \\  / |\r\n");
