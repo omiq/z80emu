@@ -175,7 +175,7 @@ int typeHardDisk(DSKFMT *d) {  // hard disk type
     d->secsize = 128;
     d->rsvd = 2;
     d->spb = 8;  // 1K blocks
-    d->dir = 64; // 512x4 = 2048 directory entries
+    d->dir = 1024; // 8192x4 = 32768 directory entries
     d->skew = 1;
     d->trans= (int *)malloc(d->sectors*sizeof(int));
     for (i=0; i<d->sectors; i++) {
@@ -395,9 +395,8 @@ int _fsFindBlocksInFile(DSKFMT *d, char *dir, char *cpmfn, int *blocks) {
 int _fsFindBlocksInUse(DSKFMT *d, char *dir, int *blocks) {
     int blocksize, fcbs, i, recs, nblocks, j, bno;
     char *buf, *fcb, fnext[8+3+1];
-
     // 1. set blocks to 0
-    for (i=0; i<256; i++) blocks[i]=0;
+    for (i=0; i<1000; i++) blocks[i]=0;
 
     // 2. set directory blocks in use
     for (i=0; i<d->dir; i++) blocks[i]=1;
@@ -481,8 +480,10 @@ char *_CreateExtent(DSKFMT *d, char *dir, char *cpmfn, int eno) {
 
 int _GetFreeBlock(int *blocks) {
     int i;
+    // Use a reasonable maximum that covers all our disk types
+    int maxBlocks = 1000; // Should be enough for all disk types
 
-    for (i=0; i<256; i++) // dir blocks should already be marked as in use
+    for (i=0; i<maxBlocks; i++) // dir blocks should already be marked as in use
         if (blocks[i]==0) {
             blocks[i]=1; // mark as now allocated
             return i;
@@ -645,7 +646,7 @@ int fsEra(DSKFMT *d, char *imgfn, char *cpmfn) {
 int fsRead(DSKFMT *d, char *imgfn, char *cpmfn, char *winfn) {
     FILE *fp, *outfp;
     char *buf, *buf2;
-    int blocks[256], recs, blocksize, nblocks, n, i, j;
+    int *blocks, recs, blocksize, nblocks, n, i, j;
 
     // 0. Open disk image
     if ((fp=fopen(imgfn,"rb"))==NULL) {
@@ -656,8 +657,10 @@ int fsRead(DSKFMT *d, char *imgfn, char *cpmfn, char *winfn) {
     // 1. read entire directory in
     if ((buf = _fsReadDir(d,fp)) == NULL) return 1;
 
-    // 2. find blocks in file
-    if (_fsFindBlocksInFile(d,buf,cpmfn,blocks) != 0) return 1;
+    // 2. allocate blocks array and find blocks in file
+    blocks = malloc(1000 * sizeof(int));
+    if (!blocks) { printf("Error: memory allocation failed\n"); return 1; }
+    if (_fsFindBlocksInFile(d,buf,cpmfn,blocks) != 0) { free(blocks); return 1; }
 
     // 3. find size
     if ((recs= _fsFindFilesize(d,buf,cpmfn)) < 0) {
@@ -681,6 +684,7 @@ int fsRead(DSKFMT *d, char *imgfn, char *cpmfn, char *winfn) {
     }
 
     fclose(outfp);
+    free(blocks);
     printf("OK.\n");
     return 0;
 }
@@ -688,7 +692,7 @@ int fsRead(DSKFMT *d, char *imgfn, char *cpmfn, char *winfn) {
 int fsWrite(DSKFMT *d, char *imgfn, char *cpmfn, char *winfn) {
     FILE *fp, *fp2;
     char *dir, *buf, *fcb;
-    int blocks[256], dataarea, blocksize, eno, nrecs, i, j, bno, lsn, n;
+    int *blocks, dataarea, blocksize, eno, nrecs, i, j, bno, lsn, n;
 
     // 0. Open disk image
     if ((fp=fopen(imgfn,"r+b"))==NULL) {
@@ -708,8 +712,10 @@ int fsWrite(DSKFMT *d, char *imgfn, char *cpmfn, char *winfn) {
     // 3. delete all user 0 file extents matching this name
     _fsEra(d,dir,cpmfn); // continue after deleted or if none
 
-    // 4. find all blocks in use
-    if (_fsFindBlocksInUse(d,dir,blocks) != 0) return 1;
+    // 4. allocate blocks array and find all blocks in use
+    blocks = malloc(1000 * sizeof(int));
+    if (!blocks) { printf("Error: memory allocation failed\n"); return 1; }
+    if (_fsFindBlocksInUse(d,dir,blocks) != 0) { free(blocks); return 1; }
 
     // 5. create extents as needed
     buf= malloc(d->secsize);
@@ -733,7 +739,7 @@ int fsWrite(DSKFMT *d, char *imgfn, char *cpmfn, char *winfn) {
     // 6. write entire dir
     if (_fsWriteDir(d,fp,dir) != 0) return 1;
 
-    free(buf); free(dir); fclose(fp2); fclose(fp);
+    free(buf); free(dir); free(blocks); fclose(fp2); fclose(fp);
     printf("OK.\n");
     return 0;
 }
