@@ -202,8 +202,8 @@ Emulator.prototype.doInit = function() {
 		}}(this),
     function(vt){return function(c){vt.sendToPrinter(c)}}(this)//printer
     );
-  // init the CPU here - using Z80 adapter
-  this.cpu = new Z80Adapter(this.memio);
+  // init the CPU here
+  this.cpu = new Cpu(this.memio, null);
   this.addr = this.cpu.pc;
   this.instrcnt = 640; // 640 ~ 2MHz
   // function interrupt(n) {

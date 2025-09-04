@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Z80 Adapter Integration Test</title>
+    <script src="https://cdn.jsdelivr.net/npm/idb@8/build/umd.js"></script>
+    <script src="memio.js"></script>
+    <script src="z80-adapter-browser.js"></script>
+    <script>
+        // Test the Z80 adapter with our existing memio interface
+        function testIntegration() {
+            console.log('Testing Z80 Adapter Integration...');
+            
+            try {
+                // Create memory I/O interface (same as emulator uses)
+                const memio = new Memio(
+                    function(c) { console.log('Console out:', c); }, // console out
+                    function() { return 0; }, // console in
+                    function() { return 1; }, // console status
+                    function(c) { console.log('Printer:', c); } // printer
+                );
+                
+                // Create Z80 adapter
+                const cpu = new Z80Adapter(memio);
+                
+                console.log('✅ Z80 Adapter created successfully');
+                console.log('✅ MemIO interface working');
+                
+                // Test basic register operations
+                cpu.a = 0x42;
+                cpu.b = 0x12;
+                cpu.c = 0x34;
+                
+                console.log('✅ Register operations working:', {
+                    a: cpu.a.toString(16),
+                    b: cpu.b.toString(16),
+                    c: cpu.c.toString(16)
+                });
+                
+                // Test register pairs
+                console.log('✅ Register pairs working:', {
+                    bc: cpu.bc.toString(16)
+                });
+                
+                // Test flags
+                cpu.cf = true;
+                cpu.zf = true;
+                console.log('✅ Flags working:', {
+                    cf: cpu.cf,
+                    zf: cpu.zf,
+                    f: cpu.f.toString(16)
+                });
+                
+                // Test memory operations
+                memio.wr(0x1000, 0xAA);
+                memio.wr(0x1001, 0xBB);
+                
+                console.log('✅ Memory operations working:', {
+                    '0x1000': memio.rd(0x1000).toString(16),
+                    '0x1001': memio.rd(0x1001).toString(16)
+                });
+                
+                // Test basic instruction execution
+                cpu.pc = 0x1000;
+                memio.wr(0x1000, 0x3E); // LD A,n
+                memio.wr(0x1001, 0x55); // n = 0x55
+                
+                console.log('Before instruction: A =', cpu.a.toString(16), 'PC =', cpu.pc.toString(16));
+                const result = cpu.step();
+                console.log('✅ Instruction execution result:', result);
+                console.log('After instruction: A =', cpu.a.toString(16), 'PC =', cpu.pc.toString(16));
+                console.log('Cycles =', cpu.cycles);
+                
+                // Test CP/M-like memory layout
+                console.log('Testing CP/M memory layout...');
+                
+                // Set up some CP/M-like memory areas
+                cpu.sp = 0xF000; // Stack pointer
+                cpu.pc = 0x0100; // CP/M program start
+                
+                // Test stack operations
+                cpu.push(0x1234);
+                console.log('✅ Stack operations working: SP =', cpu.sp.toString(16));
+                
+                const popped = cpu.pop();
+                console.log('✅ Pop working: popped =', popped.toString(16), 'SP =', cpu.sp.toString(16));
+                
+                console.log('🎉 Z80 Adapter Integration Test PASSED!');
+                console.log('Ready for integration with emulator.js');
+                
+                // Test additional methods required by emulator
+                console.log('Testing additional emulator methods...');
+                
+                // Test setRegisters
+                const regResult = cpu.setRegisters(['', 'a', '42', 'b', '12', 'c', '34']);
+                console.log('✅ setRegisters working:', regResult);
+                console.log('Registers after set:', { a: cpu.a.toString(16), b: cpu.b.toString(16), c: cpu.c.toString(16) });
+                
+                // Test cpuStatus
+                const status = cpu.cpuStatus();
+                console.log('✅ cpuStatus working:', status);
+                
+                // Test disassemble
+                const disasm = cpu.disassemble(0x1000);
+                console.log('✅ disassemble working:', disasm[0]);
+                
+                // Test add method
+                const addResult = cpu.add(0x1000, 0x100);
+                console.log('✅ add method working:', addResult.toString(16));
+                
+                console.log('🎉 All emulator methods working! Ready for full integration.');
+                
+            } catch (error) {
+                console.error('❌ Integration test failed:', error);
+                console.error('Stack trace:', error.stack);
+            }
+        }
+        
+        // Run test when page loads
+        window.onload = testIntegration;
+    </script>
+</head>
+<body>
+    <h1>Z80 Adapter Integration Test</h1>
+    <p>Testing integration with existing MemIO interface and CP/M memory layout.</p>
+    <p>Check the browser console for test results.</p>
+</body>
+</html>

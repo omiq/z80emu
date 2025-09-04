@@ -337,6 +337,146 @@ class Z80Adapter {
     nonMaskableInterrupt() {
         // TODO: Implement NMI handling
     }
+
+    // Additional methods required by the emulator
+    setRegisters(r) {
+        let s = "";
+        for (let i = 1; i < r.length; i += 2) {
+            const reg = r[i].toLowerCase();
+            const n = parseInt(r[i + 1], 16);
+            
+            switch (reg) {
+                case 'a':
+                    this.a = n & 0xFF;
+                    break;
+                case 'b':
+                    this.b = n & 0xFF;
+                    break;
+                case 'c':
+                    this.c = n & 0xFF;
+                    break;
+                case 'd':
+                    this.d = n & 0xFF;
+                    break;
+                case 'e':
+                    this.e = n & 0xFF;
+                    break;
+                case 'h':
+                    this.h = n & 0xFF;
+                    break;
+                case 'l':
+                    this.l = n & 0xFF;
+                    break;
+                case 'f':
+                    this.f = n & 0xFF;
+                    break;
+                case 'af':
+                    this.af = n;
+                    break;
+                case 'bc':
+                    this.bc = n;
+                    break;
+                case 'de':
+                    this.de = n;
+                    break;
+                case 'hl':
+                    this.hl = n;
+                    break;
+                case 'sp':
+                    this.sp = n & 0xFFFF;
+                    break;
+                case 'pc':
+                    this.pc = n & 0xFFFF;
+                    break;
+                default:
+                    s += " unknown register " + reg;
+            }
+        }
+        if (s) s += '\r\n';
+        return s;
+    }
+
+    cpuStatus() {
+        let s = "";
+        s += " AF:" + this.pad(this.af.toString(16), 4);
+        s += " " +
+             (this.f & 0x80 ? "s" : ".") +
+             (this.f & 0x40 ? "z" : ".") +
+             (this.f & 0x10 ? "h" : ".") +
+             (this.f & 0x04 ? "p" : ".") +
+             (this.f & 0x01 ? "c" : ".");
+        s += " BC:" + this.pad(this.bc.toString(16), 4);
+        s += " DE:" + this.pad(this.de.toString(16), 4);
+        s += " HL:" + this.pad(this.hl.toString(16), 4);
+        s += " (HL):" + this.pad(this.memio.rd(this.hl).toString(16), 2);
+        s += " SP:" + this.pad(this.sp.toString(16), 4);
+        s += " PC:"; // + this.pad(this.pc.toString(16), 4);
+        s += this.disassemble1(this.pc)[1];
+        return s;
+    }
+
+    disassemble(addr) {
+        let r = [];
+        for (let i = 0; i < 16; ++i) {
+            const l = this.disassemble1(addr);
+            r.push(l[1]);
+            r.push("\r\n");
+            addr = l[0];
+        }
+        return [r.join(""), addr];
+    }
+
+    disassemble1(addr) {
+        let r = [];
+        const d = this.disassembleInstruction(addr);
+        r.push(this.pad(addr.toString(16), 4));
+        r.push(": ");
+        for (let j = 0; j < d[0] - addr; j++) {
+            r.push(this.pad(this.memio.rd(addr + j).toString(16), 2));
+        }
+        while (j++ < 3) {
+            r.push("  ");
+        }
+        r.push(" ");
+        r.push(d[1]);
+        return [d[0], r.join("")];
+    }
+
+    disassembleInstruction(addr) {
+        const opcode = this.memio.rd(addr);
+        let r = "";
+        
+        // Basic instruction disassembly - we'll expand this
+        switch (opcode) {
+            case 0x00: r = "NOP"; break;
+            case 0x3E: r = "LD A,n"; break;
+            case 0x06: r = "LD B,n"; break;
+            case 0x0E: r = "LD C,n"; break;
+            case 0x16: r = "LD D,n"; break;
+            case 0x1E: r = "LD E,n"; break;
+            case 0x26: r = "LD H,n"; break;
+            case 0x2E: r = "LD L,n"; break;
+            case 0x76: r = "HALT"; break;
+            case 0xC3: r = "JP nn"; break;
+            case 0xC9: r = "RET"; break;
+            default: r = "DB " + opcode.toString(16).padStart(2, '0');
+        }
+        
+        return [addr + 1, r];
+    }
+
+    add(a, b) {
+        return (a + b) & 0xFFFF;
+    }
+
+    pad(str, n) {
+        let r = [];
+        for (let i = 0; i < (n - str.length); ++i) {
+            r.push("0");
+        }
+        r.push(str);
+        return r.join("");
+    }
 }
 
 // Export for browser use
