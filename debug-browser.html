@@ -183,45 +183,21 @@
             log('[DISK] Creating test disk image...', 'info');
             
             try {
-                log('Creating Memio instance...', 'info');
-                const memio = new Memio(
-                    (c) => log(`OUT: ${c}`, 'info'),
-                    () => 0x1A,
-                    () => true,
-                    (c) => {}
-                );
+                log('Using existing IDB library...', 'info');
                 
-                log('Memio created, waiting for database...', 'info');
-                
-                // Wait for database initialization with timeout
-                const dbTimeout = new Promise((resolve, reject) => {
-                    setTimeout(() => reject(new Error('Database initialization timeout')), 5000);
+                // Use the existing IDB library directly instead of creating new Memio
+                const db = await idb.openDB('cpm-disk', 1, {
+                    upgrade: function(db, oldVersion, newVersion) {
+                        if (!db.objectStoreNames.contains('sectors')) {
+                            db.createObjectStore('sectors', { keyPath: 'id' });
+                            log('Sectors store created', 'success');
+                        } else {
+                            log('Sectors store already exists', 'info');
+                        }
+                    }
                 });
                 
-                try {
-                    await Promise.race([
-                        new Promise(resolve => setTimeout(resolve, 1000)),
-                        dbTimeout
-                    ]);
-                } catch (timeoutError) {
-                    log('[WARN] Database wait timeout, continuing anyway...', 'info');
-                }
-                
-                log('Checking if dbPromise exists...', 'info');
-                if (memio.dbPromise) {
-                    log('dbPromise exists, waiting for database connection...', 'info');
-                    
-                    try {
-                        // Add timeout to database connection
-                        const dbConnectionTimeout = new Promise((resolve, reject) => {
-                            setTimeout(() => reject(new Error('Database connection timeout')), 10000);
-                        });
-                        
-                        const db = await Promise.race([
-                            memio.dbPromise,
-                            dbConnectionTimeout
-                        ]);
-                        log('Database connection established', 'success');
+                log('Database connection established', 'success');
                         
                         // Create a simple CP/M boot sector
                         const bootSector = [
@@ -254,28 +230,11 @@
                         
                         log('Sector record prepared, calling db.put...', 'info');
                         
-                        // Add timeout to database write
-                        const writeTimeout = new Promise((resolve, reject) => {
-                            setTimeout(() => reject(new Error('Database write timeout')), 10000);
-                        });
-                        
-                        const result = await Promise.race([
-                            db.put('sectors', sectorRecord),
-                            writeTimeout
-                        ]);
+                        const result = await db.put('sectors', sectorRecord);
                         log('Database write completed, result: ' + result, 'info');
                         
                         log('[OK] Test disk created successfully!', 'success');
                         log('Boot sector contains: ' + bootSector.map(b => '0x' + b.toString(16).padStart(2, '0')).join(' '), 'info');
-                        
-                    } catch (dbError) {
-                        log(`[ERROR] Database operation failed: ${dbError.message}`, 'error');
-                        console.error('Database error:', dbError);
-                    }
-                    
-                } else {
-                    log('[ERROR] Database not available', 'error');
-                }
                 
             } catch (error) {
                 log(`[ERROR] Test disk creation failed: ${error.message}`, 'error');
