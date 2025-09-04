@@ -230,6 +230,17 @@ class Z80Adapter {
 
             // Common zeroing of A used in boot code
             0xAF: () => { this.a = 0; this.zf = true; this.sf = false; this.pf = true; this.cf = false; this.hf = false; this.nf = false; this.cycles += 4; }, // XOR A
+            
+            // OR operations - CRITICAL FOR CP/M BOOT!
+            0xB0: () => { this.a = this.or1(this.a, this.b); this.cycles += 4; }, // OR B
+            0xB1: () => { this.a = this.or1(this.a, this.c); this.cycles += 4; }, // OR C
+            0xB2: () => { this.a = this.or1(this.a, this.d); this.cycles += 4; }, // OR D
+            0xB3: () => { this.a = this.or1(this.a, this.e); this.cycles += 4; }, // OR E
+            0xB4: () => { this.a = this.or1(this.a, this.h); this.cycles += 4; }, // OR H
+            0xB5: () => { this.a = this.or1(this.a, this.l); this.cycles += 4; }, // OR L
+            0xB6: () => { this.a = this.or1(this.a, this.r1(this.hl)); this.cycles += 7; }, // OR (HL)
+            0xB7: () => { this.a = this.or1(this.a, this.a); this.cycles += 4; }, // OR A (test A)
+            0xF6: () => { this.a = this.or1(this.a, this.next1()); this.cycles += 7; }, // OR n
         };
     }
 
@@ -430,6 +441,17 @@ class Z80Adapter {
         this.cf = a < b;
         this.pf = this.calcParity(result);
         this.nf = true;
+        return result;
+    }
+
+    or1(a, b) {
+        const result = (a | b) & 0xFF;
+        this.zf = (result === 0);
+        this.sf = (result & 0x80) !== 0;
+        this.hf = false;
+        this.cf = false;
+        this.pf = this.calcParity(result);
+        this.nf = false;
         return result;
     }
 
