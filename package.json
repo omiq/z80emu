@@ -1,0 +1,17 @@
+{
+  "name": "z80emu",
+  "version": "1.0.0",
+  "description": "A Zilog Z80 CPU emulator that runs CP/M 2.2 in modern web browsers. This emulator has been updated to use IndexedDB instead of the deprecated Web SQL Database API, making it compatible with all modern browsers.",
+  "main": "emulator.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "z80-base": "^2.0.1",
+    "z80-disasm": "^2.2.3",
+    "z80-emulator": "^2.3.0"
+  }
+}

@@ -1807,7 +1807,7 @@ VT100.prototype.updateCursorPosition = function(x, y) {
   this.cursor.style.visibility = '';
   
   // Debug logging
-  console.log('updateCursorPosition: cursorX=' + this.cursorX + ', cursorY=' + this.cursorY + ', pixelX=' + pixelX + ', pixelY=' + pixelY + ', actualCharWidth=' + actualCharWidth);
+  // console.log('updateCursorPosition: cursorX=' + this.cursorX + ', cursorY=' + this.cursorY + ', pixelX=' + pixelX + ', pixelY=' + pixelY + ', actualCharWidth=' + actualCharWidth);
 };
 
 VT100.prototype.showCursor = function(x, y) {
@@ -2999,7 +2999,7 @@ VT100.prototype.cr = function() {
 };
 
 VT100.prototype.lf = function(count) {
-  window.console.log('LF called: count=' + count + ', cursorY=' + this.cursorY);
+  // window.console.log('LF called: count=' + count + ', cursorY=' + this.cursorY);
   if (count == undefined) {
     count    = 1;
   } else {
@@ -3028,7 +3028,7 @@ VT100.prototype.lf = function(count) {
     // Update cursor visual position using unified positioning
     this.updateCursorPosition();
   }
-  window.console.log('LF finished: cursorY=' + this.cursorY);
+  // window.console.log('LF finished: cursorY=' + this.cursorY);
   this.needWrap = false; // Reset wrap flag after line feed
 };
 
@@ -3921,7 +3921,7 @@ VT100.prototype.renderString = function(s, showCursor) {
     this.cursor.style.visibility = '';
   }
   // Write text at current cursor position
-  window.console.log('renderString: calling putString with cursorX=' + this.cursorX + ', cursorY=' + this.cursorY + ', text="' + s + '"');
+  // window.console.log('renderString: calling putString with cursorX=' + this.cursorX + ', cursorY=' + this.cursorY + ', text="' + s + '"');
   // Add debugging for strange characters
   if (s.indexOf('Á') !== -1 || s.indexOf('À') !== -1) {
     window.console.log('WARNING: Strange characters detected in text: "' + s + '"');

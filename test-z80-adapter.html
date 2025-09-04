@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Z80 Adapter Test</title>
+    <script src="node_modules/z80-emulator/dist/z80-emulator.js"></script>
+    <script src="z80-adapter.js"></script>
+    <script>
+        // Simple memory I/O interface for testing
+        class TestMemIO {
+            constructor() {
+                this.memory = new Uint8Array(65536);
+                this.ports = new Uint8Array(256);
+            }
+            
+            rd(address) {
+                return this.memory[address];
+            }
+            
+            wr(address, value) {
+                this.memory[address] = value;
+            }
+            
+            rdPort(address) {
+                return this.ports[address];
+            }
+            
+            wrPort(address, value) {
+                this.ports[address] = value;
+            }
+        }
+
+        // Test function
+        function testZ80Adapter() {
+            console.log('Testing Z80 Adapter...');
+            
+            try {
+                // Create memory I/O interface
+                const memio = new TestMemIO();
+                
+                // Create Z80 adapter
+                const cpu = new Z80Adapter(memio);
+                
+                console.log('Z80 Adapter created successfully');
+                
+                // Test basic register operations
+                cpu.a = 0x42;
+                cpu.b = 0x12;
+                cpu.c = 0x34;
+                cpu.d = 0x56;
+                cpu.e = 0x78;
+                cpu.h = 0x9A;
+                cpu.l = 0xBC;
+                
+                console.log('Registers set:', {
+                    a: cpu.a.toString(16),
+                    b: cpu.b.toString(16),
+                    c: cpu.c.toString(16),
+                    d: cpu.d.toString(16),
+                    e: cpu.e.toString(16),
+                    h: cpu.h.toString(16),
+                    l: cpu.l.toString(16)
+                });
+                
+                // Test register pairs
+                console.log('Register pairs:', {
+                    bc: cpu.bc.toString(16),
+                    de: cpu.de.toString(16),
+                    hl: cpu.hl.toString(16)
+                });
+                
+                // Test flags
+                cpu.cf = true;
+                cpu.zf = true;
+                console.log('Flags:', {
+                    cf: cpu.cf,
+                    zf: cpu.zf,
+                    f: cpu.f.toString(16)
+                });
+                
+                // Test memory operations
+                memio.wr(0x1000, 0xAA);
+                memio.wr(0x1001, 0xBB);
+                
+                console.log('Memory read:', {
+                    '0x1000': memio.rd(0x1000).toString(16),
+                    '0x1001': memio.rd(0x1001).toString(16)
+                });
+                
+                // Test basic instruction execution
+                cpu.pc = 0x1000;
+                console.log('PC set to:', cpu.pc.toString(16));
+                
+                console.log('Z80 Adapter test completed successfully!');
+                
+            } catch (error) {
+                console.error('Test failed:', error);
+            }
+        }
+        
+        // Run test when page loads
+        window.onload = testZ80Adapter;
+    </script>
+</head>
+<body>
+    <h1>Z80 Adapter Test</h1>
+    <p>Check the browser console for test results.</p>
+</body>
+</html>
