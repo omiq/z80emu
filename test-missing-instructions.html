@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Missing Z80 Instructions Test</title>
+    <style>
+        body { font-family: monospace; background: #000; color: #0f0; padding: 20px; }
+        .result { margin: 10px 0; padding: 10px; border: 1px solid #0f0; }
+        .error { color: #f00; }
+        .success { color: #0f0; }
+        .info { color: #0ff; }
+        button { background: #0f0; color: #000; border: none; padding: 10px; margin: 5px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1>Missing Z80 Instructions Test</h1>
+    
+    <div id="results"></div>
+    
+    <button onclick="testInstructions()">Test Critical Instructions</button>
+    <button onclick="clearResults()">Clear</button>
+    
+    <script src="https://cdn.jsdelivr.net/npm/idb@8/build/umd.js"></script>
+    <script src="memio.js?v=2025.01.28.200"></script>
+    <script src="z80.js?v=2025.01.28.201"></script>
+    
+    <script>
+        function log(message, type = 'info') {
+            const div = document.createElement('div');
+            div.className = type;
+            div.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            document.getElementById('results').appendChild(div);
+            console.log(message);
+        }
+        
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+        }
+        
+        async function testInstructions() {
+            log('Testing critical Z80 instructions for C compilers...', 'info');
+            
+            try {
+                // Create a mock memio
+                const mockMemio = {
+                    ram: new Array(65536).fill(0),
+                    rd: (addr) => mockMemio.ram[addr & 0xFFFF],
+                    wr: (addr, val) => { mockMemio.ram[addr & 0xFFFF] = val & 0xFF; return val; },
+                    input: (port) => 0xFF,
+                    output: (port, val) => {}
+                };
+                
+                const cpu = new Cpu(mockMemio, null);
+                
+                // Test critical instructions that C compilers need
+                const testInstructions = [
+                    { name: 'CB prefix (bit operations)', opcode: 0xCB, data: [0xCB, 0x00] },
+                    { name: 'ED prefix (extended Z80)', opcode: 0xED, data: [0xED, 0x00] },
+                    { name: 'DD prefix (IX registers)', opcode: 0xDD, data: [0xDD, 0x00] },
+                    { name: 'FD prefix (IY registers)', opcode: 0xFD, data: [0xFD, 0x00] },
+                    { name: 'RLC A (rotate left)', opcode: 0x07, data: [0x07] },
+                    { name: 'RRC A (rotate right)', opcode: 0x0F, data: [0x0F] },
+                    { name: 'RL A (rotate left through carry)', opcode: 0x17, data: [0x17] },
+                    { name: 'RR A (rotate right through carry)', opcode: 0x1F, data: [0x1F] },
+                    { name: 'DAA (decimal adjust)', opcode: 0x27, data: [0x27] },
+                    { name: 'CPL (complement A)', opcode: 0x2F, data: [0x2F] },
+                    { name: 'SCF (set carry flag)', opcode: 0x37, data: [0x37] },
+                    { name: 'CCF (complement carry flag)', opcode: 0x3F, data: [0x3F] }
+                ];
+                
+                for (const test of testInstructions) {
+                    // Load instruction into memory
+                    for (let i = 0; i < test.data.length; i++) {
+                        mockMemio.ram[i] = test.data[i];
+                    }
+                    
+                    cpu.pc = 0;
+                    const initialPC = cpu.pc;
+                    
+                    try {
+                        const result = cpu.step();
+                        if (result) {
+                            log(`✅ ${test.name}: Implemented`, 'success');
+                        } else {
+                            log(`❌ ${test.name}: Not implemented`, 'error');
+                        }
+                    } catch (error) {
+                        log(`❌ ${test.name}: Error - ${error.message}`, 'error');
+                    }
+                }
+                
+                log('Instruction test completed', 'info');
+                
+            } catch (error) {
+                log(`Test failed: ${error.message}`, 'error');
+                console.error(error);
+            }
+        }
+    </script>
+</body>
+</html>
