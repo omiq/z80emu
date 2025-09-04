@@ -181,6 +181,7 @@
             log('[DISK] Creating test disk image...', 'info');
             
             try {
+                log('Creating Memio instance...', 'info');
                 const memio = new Memio(
                     (c) => log(`OUT: ${c}`, 'info'),
                     () => 0x1A,
@@ -188,12 +189,37 @@
                     (c) => {}
                 );
                 
-                // Wait for database initialization
-                await new Promise(resolve => setTimeout(resolve, 1000));
+                log('Memio created, waiting for database...', 'info');
                 
+                // Wait for database initialization with timeout
+                const dbTimeout = new Promise((resolve, reject) => {
+                    setTimeout(() => reject(new Error('Database initialization timeout')), 5000);
+                });
+                
+                try {
+                    await Promise.race([
+                        new Promise(resolve => setTimeout(resolve, 1000)),
+                        dbTimeout
+                    ]);
+                } catch (timeoutError) {
+                    log('[WARN] Database wait timeout, continuing anyway...', 'info');
+                }
+                
+                log('Checking if dbPromise exists...', 'info');
                 if (memio.dbPromise) {
-                    const db = await memio.dbPromise;
-                    log('Database ready for disk creation', 'success');
+                    log('dbPromise exists, waiting for database connection...', 'info');
+                    
+                    try {
+                        // Add timeout to database connection
+                        const dbConnectionTimeout = new Promise((resolve, reject) => {
+                            setTimeout(() => reject(new Error('Database connection timeout')), 10000);
+                        });
+                        
+                        const db = await Promise.race([
+                            memio.dbPromise,
+                            dbConnectionTimeout
+                        ]);
+                        log('Database connection established', 'success');
                     
                     // Create a simple CP/M boot sector
                     const bootSector = [
@@ -211,27 +237,47 @@
                         sectorData[i] = bootSector[i];
                     }
                     
-                    // Write the boot sector to the database
-                    log('Writing boot sector to database...', 'info');
-                    await db.put('sectors', {
-                        id: 0*65536+0*256+1-1, // Drive 0, Track 0, Sector 1
-                        drive: 0,
-                        track: 0,
-                        sector: 1,
-                        dirty: 0,
-                        data: sectorData
-                    });
+                                            // Write the boot sector to the database
+                        log('Writing boot sector to database...', 'info');
+                        log('Sector data length: ' + sectorData.length, 'info');
+                        
+                        const sectorRecord = {
+                            id: 0*65536+0*256+1-1, // Drive 0, Track 0, Sector 1
+                            drive: 0,
+                            track: 0,
+                            sector: 1,
+                            dirty: 0,
+                            data: sectorData
+                        };
+                        
+                        log('Sector record prepared, calling db.put...', 'info');
+                        
+                        // Add timeout to database write
+                        const writeTimeout = new Promise((resolve, reject) => {
+                            setTimeout(() => reject(new Error('Database write timeout')), 10000);
+                        });
+                        
+                        const result = await Promise.race([
+                            db.put('sectors', sectorRecord),
+                            writeTimeout
+                        ]);
+                        log('Database write completed, result: ' + result, 'info');
+                        
+                        log('[OK] Test disk created successfully!', 'success');
+                        log('Boot sector contains: ' + bootSector.map(b => '0x' + b.toString(16).padStart(2, '0')).join(' '), 'info');
                     
-                    log('[OK] Test disk created successfully!', 'success');
-                    log('Boot sector contains: ' + bootSector.map(b => '0x' + b.toString(16).padStart(2, '0')).join(' '), 'info');
+                                    } else {
+                        log('[ERROR] Database not available', 'error');
+                    }
                     
-                } else {
-                    log('[ERROR] Database not available', 'error');
+                } catch (dbError) {
+                    log(`[ERROR] Database operation failed: ${dbError.message}`, 'error');
+                    console.error('Database error:', dbError);
                 }
                 
             } catch (error) {
                 log(`[ERROR] Test disk creation failed: ${error.message}`, 'error');
-                console.error(error);
+                console.error('General error:', error);
             }
         }
         
