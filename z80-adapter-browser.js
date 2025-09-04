@@ -108,6 +108,12 @@ class Z80Adapter {
             0x29: () => { this.hl = this.add2(this.hl, this.hl); this.cycles += 11; }, // ADD HL,HL
             0x39: () => { this.hl = this.add2(this.hl, this.sp); this.cycles += 11; }, // ADD HL,SP
             
+            // Conditional jump instructions - CRITICAL FOR CP/M BOOT!
+            0xC2: () => { const addr = this.next2(); if (!this.zf) this.pc = addr; this.cycles += 10; }, // JP NZ,nn
+            0xCA: () => { const addr = this.next2(); if (this.zf) this.pc = addr; this.cycles += 10; }, // JP Z,nn
+            0xD2: () => { const addr = this.next2(); if (!this.cf) this.pc = addr; this.cycles += 10; }, // JP NC,nn
+            0xDA: () => { const addr = this.next2(); if (this.cf) this.pc = addr; this.cycles += 10; }, // JP C,nn
+            
             0x0B: () => { this.bc = (this.bc - 1) & 0xFFFF; this.cycles += 6; }, // DEC BC
             0x1B: () => { this.de = (this.de - 1) & 0xFFFF; this.cycles += 6; }, // DEC DE
             0x2B: () => { this.hl = (this.hl - 1) & 0xFFFF; this.cycles += 6; }, // DEC HL
