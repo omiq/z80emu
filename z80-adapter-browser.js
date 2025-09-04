@@ -73,6 +73,14 @@ class Z80Adapter {
             0x4D: () => { this.c = this.l; this.cycles += 4; }, // LD C,L
             0x4F: () => { this.c = this.a; this.cycles += 4; }, // LD C,A
             
+            // LD A,<reg> instructions - CRITICAL FOR CP/M BOOT!
+            0x78: () => { this.a = this.b; this.cycles += 4; }, // LD A,B
+            0x79: () => { this.a = this.c; this.cycles += 4; }, // LD A,C
+            0x7A: () => { this.a = this.d; this.cycles += 4; }, // LD A,D
+            0x7B: () => { this.a = this.e; this.cycles += 4; }, // LD A,E
+            0x7C: () => { this.a = this.h; this.cycles += 4; }, // LD A,H
+            0x7D: () => { this.a = this.l; this.cycles += 4; }, // LD A,L
+            
             // Memory operations
             0x02: () => { this.w1(this.bc, this.a); this.cycles += 7; }, // LD (BC),A
             0x12: () => { this.w1(this.de, this.a); this.cycles += 7; }, // LD (DE),A
@@ -239,6 +247,16 @@ class Z80Adapter {
             // Debug logging for first few steps
             if (this.pc < 0x100) {
                 console.log(`🔍 Z80 Step: PC=0x${(this.pc - 1).toString(16).padStart(4, '0')}, Opcode=0x${opcode.toString(16).padStart(2, '0')}, A=0x${this.a.toString(16).padStart(2, '0')}`);
+                
+                // Show memory contents around PC for debugging
+                if (this.pc < 0x20) {
+                    let memDump = "Memory: ";
+                    for (let i = 0; i < 16; i++) {
+                        const addr = (this.pc - 1 + i) & 0xFFFF;
+                        memDump += `0x${this.memio.rd(addr).toString(16).padStart(2, '0')} `;
+                    }
+                    console.log(memDump);
+                }
             }
             
             if (instruction) {

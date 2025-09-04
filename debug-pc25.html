@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug PC=25 Error</title>
+    <style>
+        body { font-family: monospace; background: #000; color: #0f0; margin: 20px; }
+        .log { background: #111; padding: 10px; margin: 10px 0; border: 1px solid #0f0; }
+        button { background: #001900; color: #0f0; border: 1px solid #0f0; padding: 8px 16px; margin: 5px; cursor: pointer; }
+        button:hover { background: rgba(0,255,0,0.1); }
+        .error { color: #f00; }
+        .success { color: #0f0; }
+        .warning { color: #ff0; }
+    </style>
+</head>
+<body>
+    <h1>Debug PC=25 Error</h1>
+    <p>This page will help debug the "HALT or ILLEGAL instruction at PC=25" error during CP/M boot.</p>
+    
+    <div>
+        <button onclick="debugBootSector()">Debug Boot Sector at PC=25</button>
+        <button onclick="testOriginalCpu()">Test Original CPU</button>
+        <button onclick="testZ80Adapter()">Test Z80Adapter</button>
+        <button onclick="compareInstructions()">Compare Instruction Handling</button>
+    </div>
+    
+    <div id="log" class="log"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/idb@8/build/umd.js"></script>
+    <script type="text/javascript" src="memio.js?v=2025.01.28.200"></script>
+    <script type="text/javascript" src="z80.js?v=2025.01.28.201"></script>
+    <script type="text/javascript" src="z80-adapter-browser.js?v=2025.01.28.202"></script>
+
+    <script>
+        function log(message, type = 'info') {
+            const logDiv = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            const className = type === 'error' ? 'error' : type === 'success' ? 'success' : type === 'warning' ? 'warning' : '';
+            logDiv.innerHTML += `<div class="${className}">[${timestamp}] ${message}</div>`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        async function debugBootSector() {
+            log('=== Debugging Boot Sector at PC=25 ===');
+            
+            try {
+                // Create Memio instance
+                const memio = new Memio(
+                    function(c) { log('OUT: ' + c.charCodeAt(0)); },
+                    function() { return 0; },
+                    function() { return false; },
+                    function(c) { log('PRINTER: ' + c.charCodeAt(0)); }
+                );
+                
+                // Wait for database to be ready
+                if (memio.dbPromise) {
+                    await memio.dbPromise;
+                    log('Database ready');
+                }
+                
+                // Load the boot sector
+                log('Loading boot sector from drive 0...');
+                memio.readSector(0, 0, 1, 0);
+                
+                // Wait for I/O completion
+                let attempts = 0;
+                while (memio.iocount > 0 && attempts < 100) {
+                    await new Promise(resolve => setTimeout(resolve, 10));
+                    attempts++;
+                }
+                
+                if (memio.iocount > 0) {
+                    log('ERROR: I/O operation did not complete', 'error');
+                    return;
+                }
+                
+                log('Boot sector loaded successfully');
+                
+                // Dump memory around PC=25
+                log('Memory dump around PC=25:');
+                for (let i = 20; i <= 30; i++) {
+                    const byte = memio.rd(i);
+                    log(`PC=${i.toString(16).padStart(2, '0')}: 0x${byte.toString(16).padStart(2, '0')}`);
+                }
+                
+                // Try to disassemble the instruction at PC=25
+                log('Attempting to disassemble instruction at PC=25...');
+                
+                // Test with original CPU
+                const originalCpu = new Cpu(memio, null);
+                originalCpu.pc = 25;
+                
+                try {
+                    const disasm = originalCpu.disassemble1(25);
+                    log(`Original CPU disassembly: ${disasm}`, 'success');
+                } catch (error) {
+                    log(`Original CPU disassembly error: ${error.message}`, 'error');
+                }
+                
+                // Test with Z80Adapter
+                const z80Adapter = new Z80Adapter(memio);
+                z80Adapter.pc = 25;
+                
+                try {
+                    const disasm = z80Adapter.disassemble1(25);
+                    log(`Z80Adapter disassembly: ${disasm}`, 'success');
+                } catch (error) {
+                    log(`Z80Adapter disassembly error: ${error.message}`, 'error');
+                }
+                
+                // Try to execute the instruction with both CPUs
+                log('Testing instruction execution...');
+                
+                // Original CPU
+                originalCpu.pc = 25;
+                try {
+                    const result = originalCpu.step();
+                    log(`Original CPU step result: ${result}`, result ? 'success' : 'error');
+                } catch (error) {
+                    log(`Original CPU step error: ${error.message}`, 'error');
+                }
+                
+                // Z80Adapter
+                z80Adapter.pc = 25;
+                try {
+                    const result = z80Adapter.step();
+                    log(`Z80Adapter step result: ${result}`, result ? 'success' : 'error');
+                } catch (error) {
+                    log(`Z80Adapter step error: ${error.message}`, 'error');
+                }
+                
+            } catch (error) {
+                log(`ERROR: ${error.message}`, 'error');
+            }
+        }
+
+        async function testOriginalCpu() {
+            log('=== Testing Original CPU ===');
+            
+            try {
+                const memio = new Memio(
+                    function(c) { log('OUT: ' + c.charCodeAt(0)); },
+                    function() { return 0; },
+                    function() { return false; },
+                    function(c) { log('PRINTER: ' + c.charCodeAt(0)); }
+                );
+                
+                if (memio.dbPromise) {
+                    await memio.dbPromise;
+                }
+                
+                const cpu = new Cpu(memio, null);
+                cpu.pc = 0;
+                
+                log('Testing original CPU step execution...');
+                for (let i = 0; i < 30; i++) {
+                    try {
+                        const result = cpu.step();
+                        log(`Step ${i}: PC=${cpu.pc.toString(16).padStart(2, '0')}, result=${result}`);
+                        if (!result) {
+                            log(`HALT at step ${i}, PC=${cpu.pc.toString(16).padStart(2, '0')}`, 'error');
+                            break;
+                        }
+                    } catch (error) {
+                        log(`Error at step ${i}: ${error.message}`, 'error');
+                        break;
+                    }
+                }
+                
+            } catch (error) {
+                log(`ERROR: ${error.message}`, 'error');
+            }
+        }
+
+        async function testZ80Adapter() {
+            log('=== Testing Z80Adapter ===');
+            
+            try {
+                const memio = new Memio(
+                    function(c) { log('OUT: ' + c.charCodeAt(0)); },
+                    function() { return 0; },
+                    function() { return false; },
+                    function(c) { log('PRINTER: ' + c.charCodeAt(0)); }
+                );
+                
+                if (memio.dbPromise) {
+                    await memio.dbPromise;
+                }
+                
+                const cpu = new Z80Adapter(memio);
+                cpu.pc = 0;
+                
+                log('Testing Z80Adapter step execution...');
+                for (let i = 0; i < 30; i++) {
+                    try {
+                        const result = cpu.step();
+                        log(`Step ${i}: PC=${cpu.pc.toString(16).padStart(2, '0')}, result=${result}`);
+                        if (!result) {
+                            log(`HALT at step ${i}, PC=${cpu.pc.toString(16).padStart(2, '0')}`, 'error');
+                            break;
+                        }
+                    } catch (error) {
+                        log(`Error at step ${i}: ${error.message}`, 'error');
+                        break;
+                    }
+                }
+                
+            } catch (error) {
+                log(`ERROR: ${error.message}`, 'error');
+            }
+        }
+
+        async function compareInstructions() {
+            log('=== Comparing Instruction Handling ===');
+            
+            try {
+                const memio = new Memio(
+                    function(c) { log('OUT: ' + c.charCodeAt(0)); },
+                    function() { return 0; },
+                    function() { return false; },
+                    function(c) { log('PRINTER: ' + c.charCodeAt(0)); }
+                );
+                
+                if (memio.dbPromise) {
+                    await memio.dbPromise;
+                }
+                
+                // Load boot sector
+                memio.readSector(0, 0, 1, 0);
+                let attempts = 0;
+                while (memio.iocount > 0 && attempts < 100) {
+                    await new Promise(resolve => setTimeout(resolve, 10));
+                    attempts++;
+                }
+                
+                const originalCpu = new Cpu(memio, null);
+                const z80Adapter = new Z80Adapter(memio);
+                
+                log('Comparing instruction handling for first 30 bytes...');
+                
+                for (let pc = 0; pc < 30; pc++) {
+                    const byte = memio.rd(pc);
+                    
+                    // Test original CPU
+                    originalCpu.pc = pc;
+                    let originalResult = 'unknown';
+                    try {
+                        const result = originalCpu.step();
+                        originalResult = result ? 'success' : 'halt';
+                    } catch (error) {
+                        originalResult = 'error: ' + error.message;
+                    }
+                    
+                    // Test Z80Adapter
+                    z80Adapter.pc = pc;
+                    let adapterResult = 'unknown';
+                    try {
+                        const result = z80Adapter.step();
+                        adapterResult = result ? 'success' : 'halt';
+                    } catch (error) {
+                        adapterResult = 'error: ' + error.message;
+                    }
+                    
+                    const match = originalResult === adapterResult ? '✓' : '✗';
+                    log(`PC=${pc.toString(16).padStart(2, '0')}: 0x${byte.toString(16).padStart(2, '0')} | Original: ${originalResult} | Z80Adapter: ${adapterResult} ${match}`);
+                }
+                
+            } catch (error) {
+                log(`ERROR: ${error.message}`, 'error');
+            }
+        }
+
+        log('Debug page loaded, ready for testing');
+    </script>
+</body>
+</html>
