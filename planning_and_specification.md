@@ -207,11 +207,18 @@ In the directory /Users/chrisg/github/cpm-emulator there is a working javascript
 - ✅ **Backup Created**: Preserved working emulator state for safety
 - ✅ **Interface Compatibility**: All required emulator methods implemented and tested
 
-### Phase 3: C Compiler Testing 🚧 PLANNED
-- [ ] **Test HiTech C**: Load and attempt to run C.COM
-- [ ] **Identify Missing Instructions**: Log any unimplemented Z80 instructions
-- [ ] **Add Missing Instructions**: Implement CB, ED, DD, FD prefix instructions
-- [ ] **Verify C Compiler**: Test end-to-end compilation workflow
+### Phase 3: Critical Instruction Analysis ✅ COMPLETED
+- [x] **Created Diagnostic Tool**: `test-missing-instructions.html` for instruction testing
+- [x] **Identified Critical Issues**: ED prefix and FD prefix instruction handling bugs
+- [x] **Root Cause Found**: Original `z80.js` has bugs in extended Z80 instruction support
+- [x] **Hybrid Solution**: Implemented automatic Z80Adapter switching after initialization
+
+### Phase 4: C Compiler Testing 🚧 IN PROGRESS
+- [x] **Automatic CPU Switching**: Z80Adapter activates after 1-second delay
+- [x] **Register State Preservation**: CPU state copied during switch
+- [ ] **Test HiTech C**: Load and attempt to run C.COM with Z80Adapter
+- [ ] **Test Rogue-VT**: Load and attempt to run Rogue-VT with Z80Adapter
+- [ ] **Verify All Instructions**: Confirm ED/FD prefix instructions work correctly
 
 ### Technical Approach
 1. **Browser Compatibility**: Created custom Z80 adapter since z80-emulator is ES module based
@@ -222,8 +229,10 @@ In the directory /Users/chrisg/github/cpm-emulator there is a working javascript
 ---
 
 **Last Updated**: January 28, 2025
-**Status**: 🚧 IN PROGRESS - Z80 library integration development branch created, Phase 1 & 2 completed
+**Status**: 🚧 IN PROGRESS - Z80 library integration development branch, Phase 1-3 completed, Phase 4 in progress
 **Working Commit**: 64383a8fac3250c1316d4078f64c8e20c5781ae9
 **Development Branch**: feature/z80-library-integration (commit 96a739a)
 **Tested**: ✅ Star Trek game loads and runs successfully on drive B:
-**Next**: Test CP/M boot and basic functionality with new Z80 adapter, then proceed to Phase 3 (C compiler testing)
+**Critical Issues Found**: ❌ ED prefix and FD prefix instruction handling bugs in original z80.js
+**Solution Implemented**: ✅ Hybrid approach with automatic Z80Adapter switching after initialization
+**Next**: Test C.COM and Rogue-VT execution with Z80Adapter to verify ED/FD prefix instruction fixes

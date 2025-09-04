@@ -202,10 +202,18 @@ Emulator.prototype.doInit = function() {
 		}}(this),
     function(vt){return function(c){vt.sendToPrinter(c)}}(this)//printer
     );
-  // init the CPU here
+  // init the CPU here - use original Cpu for compatibility, but we'll switch to Z80Adapter later
   this.cpu = new Cpu(this.memio, null);
+  
+  // Store reference to Z80Adapter for later use
+  this.z80Adapter = null;
   this.addr = this.cpu.pc;
   this.instrcnt = 640; // 640 ~ 2MHz
+  
+  // Switch to Z80Adapter after a short delay to ensure initialization is complete
+  setTimeout(() => {
+    this.switchToZ80Adapter();
+  }, 1000);
   // function interrupt(n) {
   //   if (n == 0x10) // or 0x08
   //     ...
@@ -1305,4 +1313,41 @@ Emulator.prototype.handleDiskIconDrop = function(evt, driveNum) {
   };
   reader.readAsBinaryString(files[0]);
 }
+
+// Switch to Z80Adapter for better instruction support
+Emulator.prototype.switchToZ80Adapter = function() {
+  if (this.z80Adapter) return; // Already switched
+  
+  try {
+    console.log('Switching to Z80Adapter for better instruction support...');
+    
+    // Create Z80Adapter with current CPU state
+    this.z80Adapter = new Z80Adapter(this.memio);
+    
+    // Copy register state from original CPU
+    this.z80Adapter.a = this.cpu.a;
+    this.z80Adapter.f = this.cpu.f;
+    this.z80Adapter.b = this.cpu.b;
+    this.z80Adapter.c = this.cpu.c;
+    this.z80Adapter.d = this.cpu.d;
+    this.z80Adapter.e = this.cpu.e;
+    this.z80Adapter.h = this.cpu.h;
+    this.z80Adapter.l = this.cpu.l;
+    this.z80Adapter.pc = this.cpu.pc;
+    this.z80Adapter.sp = this.cpu.sp;
+    this.z80Adapter.ix = this.cpu.ix || 0;
+    this.z80Adapter.iy = this.cpu.iy || 0;
+    
+    // Switch to Z80Adapter
+    this.cpu = this.z80Adapter;
+    
+    console.log('Successfully switched to Z80Adapter');
+    this.vt100('Z80Adapter enabled for better C compiler support\r\n');
+    
+  } catch (error) {
+    console.error('Failed to switch to Z80Adapter:', error);
+    this.vt100('Warning: Could not enable Z80Adapter\r\n');
+  }
+};
+
 // vim: set shiftwidth=2 :
