@@ -33,8 +33,8 @@
     </div>
     
     <script src="https://cdn.jsdelivr.net/npm/idb@8/build/umd.js"></script>
-    <script src="memio.js"></script>
-    <script src="z80-adapter-browser.js"></script>
+    <script src="memio.js?v=2025.01.28.109"></script>
+    <script src="z80-adapter-browser.js?v=2025.01.28.110"></script>
     
     <script>
         let logOutput = '';
@@ -183,7 +183,35 @@
             log('[DISK] Creating test disk image...', 'info');
             
             try {
-                log('Using existing IDB library...', 'info');
+                log('IDB library found, attempting to open database...', 'info');
+                
+                // Test the idb library first with a simple operation
+                log('Testing idb library with simple database...', 'info');
+                try {
+                    const testDb = await idb.openDB('test-simple', 1, {
+                        upgrade: function(db) {
+                            if (!db.objectStoreNames.contains('test')) {
+                                db.createObjectStore('test', { keyPath: 'id' });
+                                log('Test store created successfully', 'success');
+                            }
+                        }
+                    });
+                    log('Simple test database opened successfully', 'success');
+                    
+                    // Test a simple put/get operation
+                    await testDb.put('test', { id: 1, value: 'test' });
+                    const testResult = await testDb.get('test', 1);
+                    log(`Test operation successful: ${JSON.stringify(testResult)}`, 'success');
+                    
+                    // Close test database
+                    testDb.close();
+                    log('Test database closed', 'info');
+                    
+                } catch (testError) {
+                    log(`[ERROR] IDB library test failed: ${testError.message}`, 'error');
+                    console.error('IDB test error:', testError);
+                    return;
+                }
                 
                 // Use the existing IDB library directly instead of creating new Memio
                 const db = await idb.openDB('cpm-disk', 1, {
