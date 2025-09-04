@@ -22,6 +22,8 @@
         <button onclick="testDiskLoading()">Test Disk Loading</button>
         <button onclick="createTestDisk()">Create Test Disk</button>
         <button onclick="testFullBoot()">Test Full Boot Process</button>
+        <button onclick="testIndexedDB()">Test IndexedDB</button>
+        <button onclick="testIdbLibrary()">Test IDB Library</button>
         <button onclick="clearLog()">Clear Log</button>
     </div>
     
@@ -364,6 +366,102 @@
                 
             } catch (error) {
                 log(`[ERROR] Full boot test failed: ${error.message}`, 'error');
+                console.error(error);
+            }
+        }
+        
+        async function testIndexedDB() {
+            log('[TEST] Testing IndexedDB...', 'info');
+            try {
+                const db = await new Promise(resolve => {
+                    const request = indexedDB.open('test-db', 1);
+                    request.onerror = (event) => {
+                        log(`IndexedDB error: ${request.error.message}`, 'error');
+                        resolve(null);
+                    };
+                    request.onsuccess = (event) => {
+                        log('IndexedDB connection successful', 'success');
+                        resolve(event.target.result);
+                    };
+                    request.onupgradeneeded = (event) => {
+                        const db = event.target.result;
+                        if (!db.objectStoreNames.contains('test-store')) {
+                            db.createObjectStore('test-store', { keyPath: 'id' });
+                            log('IndexedDB store created', 'success');
+                        } else {
+                            log('IndexedDB store already exists', 'info');
+                        }
+                    };
+                });
+
+                if (db) {
+                    log('IndexedDB ready for use', 'success');
+                    const store = db.transaction('test-store', 'readwrite').objectStore('test-store');
+
+                    const testData = { id: 1, name: 'Test Item' };
+                    log('Attempting to add test data...', 'info');
+                    await store.add(testData);
+                    log('Test data added', 'success');
+
+                    log('Attempting to get test data...', 'info');
+                    const result = await store.get(1);
+                    log(`Test data retrieved: ${JSON.stringify(result)}`, 'info');
+
+                    log('Attempting to delete test data...', 'info');
+                    await store.delete(1);
+                    log('Test data deleted', 'success');
+
+                    log('[OK] IndexedDB test completed', 'success');
+                } else {
+                    log('IndexedDB not available', 'error');
+                }
+            } catch (error) {
+                log(`[ERROR] IndexedDB test failed: ${error.message}`, 'error');
+                console.error(error);
+            }
+        }
+
+        async function testIdbLibrary() {
+            log('[TEST] Testing IDB Library...', 'info');
+            try {
+                if (typeof idb === 'undefined') {
+                    log('[ERROR] IDB library not loaded', 'error');
+                    return;
+                }
+                
+                log('IDB library available, testing connection...', 'info');
+                const db = await idb.openDB('test-idb-db', 1, {
+                    upgrade: function(db, oldVersion, newVersion) {
+                        if (!db.objectStoreNames.contains('test-store')) {
+                            db.createObjectStore('test-store', { keyPath: 'id' });
+                            log('IDB Library store created', 'success');
+                        } else {
+                            log('IDB Library store already exists', 'info');
+                        }
+                    }
+                });
+                
+                log('IDB Library connection successful', 'success');
+
+                                log('IDB Library ready for use', 'success');
+                
+                // Test basic operations
+                const testData = { id: 1, name: 'Test Item' };
+                log('Attempting to add test data...', 'info');
+                await db.put('test-store', testData);
+                log('Test data added', 'success');
+                
+                log('Attempting to get test data...', 'info');
+                const result = await db.get('test-store', 1);
+                log(`Test data retrieved: ${JSON.stringify(result)}`, 'info');
+                
+                log('Attempting to delete test data...', 'info');
+                await db.delete('test-store', 1);
+                log('Test data deleted', 'success');
+                
+                log('[OK] IDB Library test completed', 'success');
+            } catch (error) {
+                log(`[ERROR] IDB Library test failed: ${error.message}`, 'error');
                 console.error(error);
             }
         }
