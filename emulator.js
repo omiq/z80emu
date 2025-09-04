@@ -202,8 +202,8 @@ Emulator.prototype.doInit = function() {
 		}}(this),
     function(vt){return function(c){vt.sendToPrinter(c)}}(this)//printer
     );
-  // init the CPU here - using Z80 adapter
-  this.cpu = new Z80Adapter(this.memio);
+  // init the CPU here
+  this.cpu = new Cpu(this.memio, null);
   this.addr = this.cpu.pc;
   this.instrcnt = 640; // 640 ~ 2MHz
   // function interrupt(n) {
@@ -885,8 +885,9 @@ Emulator.prototype.doWaitIO = function() {
             return db.get('sectors', 0*65536+0*256+1-1); // Check if boot sector exists
           }).then(function(sector) {
             if (sector) {
-              // emulator.vt100("Boot sector found, starting CP/M 2.2...\r\n");
+              emulator.vt100("Boot sector found, starting CP/M 2.2...\r\n");
               // Load bootloader from drive 0 to address 0
+              emulator.vt100("Loading boot sector to address 0x0000...\r\n");
               emulator.memio.readSector(0, 0, 1, 0);
               emulator.cpu.pc = 0;
               emulator.io_op = 5; // wait for boot sector load
@@ -911,9 +912,17 @@ Emulator.prototype.doWaitIO = function() {
   case 5: // wait for boot sector load completion
     // this.vt100(".");
     if (this.memio.iocount == 0) {
-      // this.vt100("DONE\r\n");
+      this.vt100("Boot sector loaded, starting execution...\r\n");
       this.io_op = 0; // no pending op
-      //this.vt100("Starting CP/M 2.2...\r\n");
+      this.vt100("Starting CP/M 2.2...\r\n");
+      
+      // Debug: show what's in memory at address 0
+      let memDump = "Boot sector at 0x0000: ";
+      for (let i = 0; i < 16; i++) {
+        memDump += "0x" + this.memio.rd(i).toString(16).padStart(2, '0') + " ";
+      }
+      this.vt100(memDump + "\r\n");
+      
       this.gotoState(5 /* STATE_EXEC */); // Start execution
       return false;
     }
