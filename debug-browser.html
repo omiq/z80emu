@@ -214,7 +214,8 @@
                 }
                 
                 // Use the existing IDB library directly instead of creating new Memio
-                const db = await idb.openDB('cpm-disk', 1, {
+                // Use the same database name that Memio expects
+                const db = await idb.openDB('emu8080', 1, {
                     upgrade: function(db, oldVersion, newVersion) {
                         if (!db.objectStoreNames.contains('sectors')) {
                             db.createObjectStore('sectors', { keyPath: 'id' });
