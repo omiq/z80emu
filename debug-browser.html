@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Z80 Adapter Browser Debug</title>
+    <style>
+        body { font-family: monospace; background: #000; color: #0f0; padding: 20px; }
+        .debug { margin: 10px 0; padding: 10px; border: 1px solid #0f0; }
+        .error { color: #f00; }
+        .success { color: #0f0; }
+        .info { color: #0ff; }
+        button { background: #0f0; color: #000; border: none; padding: 10px; margin: 5px; cursor: pointer; }
+        button:hover { background: #0a0; }
+        pre { background: #111; padding: 10px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>[DEBUG] Z80 Adapter Browser Debug</h1>
+    
+    <div class="debug">
+        <h3>Test Controls</h3>
+        <button onclick="testZ80Adapter()">Test Z80 Adapter</button>
+        <button onclick="testDiskLoading()">Test Disk Loading</button>
+        <button onclick="createTestDisk()">Create Test Disk</button>
+        <button onclick="testFullBoot()">Test Full Boot Process</button>
+        <button onclick="clearLog()">Clear Log</button>
+    </div>
+    
+    <div class="debug">
+        <h3>Debug Output</h3>
+        <div id="output"></div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/idb@8/build/umd.js"></script>
+    <script src="memio.js"></script>
+    <script src="z80-adapter-browser.js"></script>
+    
+    <script>
+        let logOutput = '';
+        
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = `[${timestamp}] ${message}`;
+            logOutput += logEntry + '\n';
+            
+            const outputDiv = document.getElementById('output');
+            const logDiv = document.createElement('div');
+            logDiv.className = type;
+            logDiv.textContent = logEntry;
+            outputDiv.appendChild(logDiv);
+            
+            console.log(logEntry);
+        }
+        
+        function clearLog() {
+            logOutput = '';
+            document.getElementById('output').innerHTML = '';
+        }
+        
+        async function testZ80Adapter() {
+            log('[TEST] Testing Z80 Adapter...', 'info');
+            
+            try {
+                // Create a simple mock memio
+                const mockMemio = {
+                    ram: new Array(65536).fill(0),
+                    rd: (addr) => mockMemio.ram[addr & 0xFFFF],
+                    wr: (addr, val) => { mockMemio.ram[addr & 0xFFFF] = val & 0xFF; return val; },
+                    input: (port) => 0xFF,
+                    output: (port, val) => {}
+                };
+                
+                // Test basic instructions
+                mockMemio.ram[0] = 0x3E; // LD A,n
+                mockMemio.ram[1] = 0x42; // n = 0x42
+                mockMemio.ram[2] = 0x00; // NOP
+                
+                const cpu = new Z80Adapter(mockMemio);
+                cpu.pc = 0;
+                
+                log(`CPU created: PC=0x${cpu.pc.toString(16).padStart(4, '0')}`, 'info');
+                
+                // Execute first instruction
+                const result1 = cpu.step();
+                log(`Step 1 result: ${result1}, A=0x${cpu.a.toString(16).padStart(2, '0')}, PC=0x${cpu.pc.toString(16).padStart(4, '0')}`, result1 ? 'success' : 'error');
+                
+                // Execute second instruction
+                const result2 = cpu.step();
+                log(`Step 2 result: ${result2}, PC=0x${cpu.pc.toString(16).padStart(4, '0')}`, result2 ? 'success' : 'error');
+                
+                log('[OK] Z80 Adapter test completed', 'success');
+                
+            } catch (error) {
+                log(`[ERROR] Z80 Adapter test failed: ${error.message}`, 'error');
+                console.error(error);
+            }
+        }
+        
+        async function testDiskLoading() {
+            log('[DISK] Testing Disk Loading...', 'info');
+            
+            try {
+                const memio = new Memio(
+                    (c) => log(`OUT: ${c}`, 'info'),
+                    () => 0x1A,
+                    () => true,
+                    (c) => {}
+                );
+                
+                log('Memio created successfully', 'success');
+                
+                // Wait for database initialization
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                
+                log('Checking database status...', 'info');
+                
+                if (memio.dbPromise) {
+                    const db = await memio.dbPromise;
+                    log('Database connection established', 'success');
+                    
+                    // Check what's in the database
+                    log('Checking database contents...', 'info');
+                    
+                    try {
+                        // List all sectors
+                        const sectors = await db.getAll('sectors');
+                        log(`Database contains ${sectors.length} sectors`, 'info');
+                        
+                        if (sectors.length === 0) {
+                            log('[WARN] Database is empty - no sectors found', 'error');
+                            log('This explains why sector read times out', 'info');
+                            log('Need to load a disk image first', 'info');
+                            return;
+                        }
+                        
+                        // Show first few sectors
+                        for (let i = 0; i < Math.min(sectors.length, 3); i++) {
+                            const sector = sectors[i];
+                            log(`Sector ${i}: Drive=${sector.drive}, Track=${sector.track}, Sector=${sector.sector}`, 'info');
+                        }
+                        
+                    } catch (dbError) {
+                        log(`Database query error: ${dbError.message}`, 'error');
+                    }
+                    
+                    // Try to read a sector
+                    log('Attempting to read sector...', 'info');
+                    memio.readSector(0, 0, 1, 0);
+                    
+                    // Wait for completion
+                    let attempts = 0;
+                    while (memio.iocount > 0 && attempts < 100) {
+                        await new Promise(resolve => setTimeout(resolve, 50));
+                        attempts++;
+                    }
+                    
+                    if (memio.iocount === 0) {
+                        log('Sector read completed', 'success');
+                        
+                        // Check memory contents
+                        let memDump = 'Memory at 0x0000: ';
+                        for (let i = 0; i < 16; i++) {
+                            memDump += `0x${memio.ram[i].toString(16).padStart(2, '0')} `;
+                        }
+                        log(memDump, 'info');
+                        
+                    } else {
+                        log('Sector read timed out', 'error');
+                    }
+                    
+                } else {
+                    log('Database promise not available', 'error');
+                }
+                
+            } catch (error) {
+                log(`[ERROR] Disk loading test failed: ${error.message}`, 'error');
+                console.error(error);
+            }
+        }
+        
+        async function createTestDisk() {
+            log('[DISK] Creating test disk image...', 'info');
+            
+            try {
+                const memio = new Memio(
+                    (c) => log(`OUT: ${c}`, 'info'),
+                    () => 0x1A,
+                    () => true,
+                    (c) => {}
+                );
+                
+                // Wait for database initialization
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                
+                if (memio.dbPromise) {
+                    const db = await memio.dbPromise;
+                    log('Database ready for disk creation', 'success');
+                    
+                    // Create a simple CP/M boot sector
+                    const bootSector = [
+                        0xC3, 0x00, 0x01,  // JP 0x0100 (jump to CP/M entry point)
+                        0x00, 0x00, 0x00,  // NOPs
+                        0x00, 0x00, 0x00,  // NOPs
+                        0x00, 0x00, 0x00,  // NOPs
+                        0x00, 0x00, 0x00,  // NOPs
+                        0x00, 0x00, 0x00   // NOPs
+                    ];
+                    
+                    // Fill the rest with zeros
+                    const sectorData = new Array(128).fill(0);
+                    for (let i = 0; i < bootSector.length; i++) {
+                        sectorData[i] = bootSector[i];
+                    }
+                    
+                    // Write the boot sector to the database
+                    log('Writing boot sector to database...', 'info');
+                    await db.put('sectors', {
+                        id: 0*65536+0*256+1-1, // Drive 0, Track 0, Sector 1
+                        drive: 0,
+                        track: 0,
+                        sector: 1,
+                        dirty: 0,
+                        data: sectorData
+                    });
+                    
+                    log('[OK] Test disk created successfully!', 'success');
+                    log('Boot sector contains: ' + bootSector.map(b => '0x' + b.toString(16).padStart(2, '0')).join(' '), 'info');
+                    
+                } else {
+                    log('[ERROR] Database not available', 'error');
+                }
+                
+            } catch (error) {
+                log(`[ERROR] Test disk creation failed: ${error.message}`, 'error');
+                console.error(error);
+            }
+        }
+        
+        async function testFullBoot() {
+            log('[BOOT] Testing Full Boot Process...', 'info');
+            
+            try {
+                const memio = new Memio(
+                    (c) => log(`OUT: ${c}`, 'info'),
+                    () => 0x1A,
+                    () => true,
+                    (c) => {}
+                );
+                
+                log('Memio created, waiting for database...', 'info');
+                
+                // Wait for database initialization
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                
+                if (memio.dbPromise) {
+                    const db = await memio.dbPromise;
+                    log('Database ready, checking boot sector...', 'info');
+                    
+                    // Check if boot sector exists
+                    const sector = await db.get('sectors', 0*65536+0*256+1-1);
+                    if (sector) {
+                        log('Boot sector found in database', 'success');
+                        
+                        // Load boot sector
+                        log('Loading boot sector to address 0x0000...', 'info');
+                        memio.readSector(0, 0, 1, 0);
+                        
+                        // Wait for completion
+                        let attempts = 0;
+                        while (memio.iocount > 0 && attempts < 100) {
+                            await new Promise(resolve => setTimeout(resolve, 50));
+                            attempts++;
+                        }
+                        
+                        if (memio.iocount === 0) {
+                            log('Boot sector loaded successfully', 'success');
+                            
+                            // Show memory contents
+                            let memDump = 'Boot sector at 0x0000: ';
+                            for (let i = 0; i < 16; i++) {
+                                memDump += `0x${memio.ram[i].toString(16).padStart(2, '0')} `;
+                            }
+                            log(memDump, 'info');
+                            
+                            // Test CPU execution
+                            log('Testing CPU execution...', 'info');
+                            const cpu = new Z80Adapter(memio);
+                            cpu.pc = 0;
+                            
+                            log(`CPU initialized: PC=0x${cpu.pc.toString(16).padStart(4, '0')}`, 'info');
+                            
+                            // Execute a few instructions
+                            for (let i = 0; i < 5; i++) {
+                                const result = cpu.step();
+                                log(`Step ${i+1}: result=${result}, PC=0x${cpu.pc.toString(16).padStart(4, '0')}, A=0x${cpu.a.toString(16).padStart(2, '0')}`, result ? 'success' : 'error');
+                                
+                                if (!result) {
+                                    log('CPU step failed - stopping execution', 'error');
+                                    break;
+                                }
+                                
+                                if (cpu.pc >= 0x0100) {
+                                    log('CPU jumped to CP/M entry point - success!', 'success');
+                                    break;
+                                }
+                            }
+                            
+                        } else {
+                            log('Boot sector load timed out', 'error');
+                        }
+                        
+                    } else {
+                        log('Boot sector not found in database', 'error');
+                    }
+                    
+                } else {
+                    log('Database not available', 'error');
+                }
+                
+            } catch (error) {
+                log(`[ERROR] Full boot test failed: ${error.message}`, 'error');
+                console.error(error);
+            }
+        }
+        
+        // Auto-run basic test on page load
+        window.addEventListener('load', () => {
+            log('[READY] Debug page loaded, ready for testing', 'success');
+        });
+    </script>
+</body>
+</html>
