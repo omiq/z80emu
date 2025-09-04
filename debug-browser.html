@@ -168,46 +168,28 @@
             try {
                 log('IDB library found, attempting to open database...', 'info');
                 
-                // Test the idb library first with a simple operation
-                log('Testing idb library with simple database...', 'info');
-                try {
-                    const testDb = await idb.openDB('test-simple', 1, {
-                        upgrade: function(db) {
-                            if (!db.objectStoreNames.contains('test')) {
-                                db.createObjectStore('test', { keyPath: 'id' });
-                                log('Test store created successfully', 'success');
+                // Skip the complex test and go directly to the main database
+                // Use the same database name that Memio expects
+                log('Attempting to open emu8080 database...', 'info');
+                
+                // Add timeout to prevent infinite hanging
+                const dbTimeout = new Promise((resolve, reject) => {
+                    setTimeout(() => reject(new Error('Database connection timeout after 5 seconds')), 5000);
+                });
+                
+                const db = await Promise.race([
+                    idb.openDB('emu8080', 1, {
+                        upgrade: function(db, oldVersion, newVersion) {
+                            if (!db.objectStoreNames.contains('sectors')) {
+                                db.createObjectStore('sectors', { keyPath: 'id' });
+                                log('Sectors store created', 'success');
+                            } else {
+                                log('Sectors store already exists', 'info');
                             }
                         }
-                    });
-                    log('Simple test database opened successfully', 'success');
-                    
-                    // Test a simple put/get operation
-                    await testDb.put('test', { id: 1, value: 'test' });
-                    const testResult = await testDb.get('test', 1);
-                    log(`Test operation successful: ${JSON.stringify(testResult)}`, 'success');
-                    
-                    // Close test database
-                    testDb.close();
-                    log('Test database closed', 'info');
-                    
-                } catch (testError) {
-                    log(`[ERROR] IDB library test failed: ${testError.message}`, 'error');
-                    console.error('IDB test error:', testError);
-                    return;
-                }
-                
-                // Use the existing IDB library directly instead of creating new Memio
-                // Use the same database name that Memio expects
-                const db = await idb.openDB('emu8080', 1, {
-                    upgrade: function(db, oldVersion, newVersion) {
-                        if (!db.objectStoreNames.contains('sectors')) {
-                            db.createObjectStore('sectors', { keyPath: 'id' });
-                            log('Sectors store created', 'success');
-                        } else {
-                            log('Sectors store already exists', 'info');
-                        }
-                    }
-                });
+                    }),
+                    dbTimeout
+                ]);
                 
                 log('Database connection established', 'success');
                         
