@@ -102,6 +102,12 @@ class Z80Adapter {
             0x23: () => { this.hl = (this.hl + 1) & 0xFFFF; this.cycles += 6; }, // INC HL
             0x33: () => { this.sp = (this.sp + 1) & 0xFFFF; this.cycles += 6; }, // INC SP
             
+            // 16-bit arithmetic operations - CRITICAL FOR CP/M BOOT!
+            0x09: () => { this.hl = this.add2(this.hl, this.bc); this.cycles += 11; }, // ADD HL,BC
+            0x19: () => { this.hl = this.add2(this.hl, this.de); this.cycles += 11; }, // ADD HL,DE
+            0x29: () => { this.hl = this.add2(this.hl, this.hl); this.cycles += 11; }, // ADD HL,HL
+            0x39: () => { this.hl = this.add2(this.hl, this.sp); this.cycles += 11; }, // ADD HL,SP
+            
             0x0B: () => { this.bc = (this.bc - 1) & 0xFFFF; this.cycles += 6; }, // DEC BC
             0x1B: () => { this.de = (this.de - 1) & 0xFFFF; this.cycles += 6; }, // DEC DE
             0x2B: () => { this.hl = (this.hl - 1) & 0xFFFF; this.cycles += 6; }, // DEC HL
