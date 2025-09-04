@@ -215,6 +215,13 @@ class Z80Adapter {
             // Rotate and shift operations
             0x07: () => { this.a = ((this.a << 1) | (this.a >> 7)) & 0xFF; this.cf = (this.a & 0x01) !== 0; this.cycles += 4; }, // RLCA
             0x0F: () => { this.a = ((this.a >> 1) | (this.a << 7)) & 0xFF; this.cf = (this.a & 0x80) !== 0; this.cycles += 4; }, // RRCA
+            
+            // I/O operations essential for CP/M boot (uses ports 0x0a-0x10)
+            0xDB: () => { const port = this.next1(); this.a = this.memio.input(port) & 0xFF; this.cycles += 11; }, // IN A,(n)
+            0xD3: () => { const port = this.next1(); this.memio.output(port, this.a); this.cycles += 11; }, // OUT (n),A
+
+            // Common zeroing of A used in boot code
+            0xAF: () => { this.a = 0; this.zf = true; this.sf = false; this.pf = true; this.cf = false; this.hf = false; this.nf = false; this.cycles += 4; }, // XOR A
         };
     }
 
