@@ -74,10 +74,10 @@ class Z80Adapter {
             0x4F: () => { this.c = this.a; this.cycles += 4; }, // LD C,A
             
             // Memory operations
-            0x02: () => { this.w1(this.bc(), this.a); this.cycles += 7; }, // LD (BC),A
-            0x12: () => { this.w1(this.de(), this.a); this.cycles += 7; }, // LD (DE),A
-            0x0A: () => { this.a = this.r1(this.bc()); this.cycles += 7; }, // LD A,(BC)
-            0x1A: () => { this.a = this.r1(this.de()); this.cycles += 7; }, // LD A,(DE)
+            0x02: () => { this.w1(this.bc, this.a); this.cycles += 7; }, // LD (BC),A
+            0x12: () => { this.w1(this.de, this.a); this.cycles += 7; }, // LD (DE),A
+            0x0A: () => { this.a = this.r1(this.bc); this.cycles += 7; }, // LD A,(BC)
+            0x1A: () => { this.a = this.r1(this.de); this.cycles += 7; }, // LD A,(DE)
             
             // Arithmetic operations
             0x80: () => { this.a = this.add1(this.a, this.b); this.cycles += 4; }, // ADD A,B
@@ -89,14 +89,14 @@ class Z80Adapter {
             0x87: () => { this.a = this.add1(this.a, this.a); this.cycles += 4; }, // ADD A,A
             
             // Increment/Decrement
-            0x03: () => { this.bc = (this.bc() + 1) & 0xFFFF; this.cycles += 6; }, // INC BC
-            0x13: () => { this.de = (this.de() + 1) & 0xFFFF; this.cycles += 6; }, // INC DE
-            0x23: () => { this.hl = (this.hl() + 1) & 0xFFFF; this.cycles += 6; }, // INC HL
+            0x03: () => { this.bc = (this.bc + 1) & 0xFFFF; this.cycles += 6; }, // INC BC
+            0x13: () => { this.de = (this.de + 1) & 0xFFFF; this.cycles += 6; }, // INC DE
+            0x23: () => { this.hl = (this.hl + 1) & 0xFFFF; this.cycles += 6; }, // INC HL
             0x33: () => { this.sp = (this.sp + 1) & 0xFFFF; this.cycles += 6; }, // INC SP
             
-            0x0B: () => { this.bc = (this.bc() - 1) & 0xFFFF; this.cycles += 6; }, // DEC BC
-            0x1B: () => { this.de = (this.de() - 1) & 0xFFFF; this.cycles += 6; }, // DEC DE
-            0x2B: () => { this.hl = (this.hl() - 1) & 0xFFFF; this.cycles += 6; }, // DEC HL
+            0x0B: () => { this.bc = (this.bc - 1) & 0xFFFF; this.cycles += 6; }, // DEC BC
+            0x1B: () => { this.de = (this.de - 1) & 0xFFFF; this.cycles += 6; }, // DEC DE
+            0x2B: () => { this.hl = (this.hl - 1) & 0xFFFF; this.cycles += 6; }, // DEC HL
             0x3B: () => { this.sp = (this.sp - 1) & 0xFFFF; this.cycles += 6; }, // DEC SP
             
             // Jumps
@@ -112,10 +112,10 @@ class Z80Adapter {
             0xC8: () => { if (this.zf) { this.pc = this.pop(); this.cycles += 11; } else { this.cycles += 5; } }, // RET Z
             
             // Stack operations
-            0xC5: () => { this.push(this.bc()); this.cycles += 11; }, // PUSH BC
-            0xD5: () => { this.push(this.de()); this.cycles += 11; }, // PUSH DE
-            0xE5: () => { this.push(this.hl()); this.cycles += 11; }, // PUSH HL
-            0xF5: () => { this.push(this.af()); this.cycles += 11; }, // PUSH AF
+            0xC5: () => { this.push(this.bc); this.cycles += 11; }, // PUSH BC
+            0xD5: () => { this.push(this.de); this.cycles += 11; }, // PUSH DE
+            0xE5: () => { this.push(this.hl); this.cycles += 11; }, // PUSH HL
+            0xF5: () => { this.push(this.af); this.cycles += 11; }, // PUSH AF
             
             0xC1: () => { this.bc = this.pop(); this.cycles += 10; }, // POP BC
             0xD1: () => { this.de = this.pop(); this.cycles += 10; }, // POP DE
@@ -125,6 +125,51 @@ class Z80Adapter {
             // Control
             0x76: () => { this.halted = true; this.cycles += 4; }, // HALT
             0x00: () => { this.cycles += 4; }, // NOP
+            
+            // Critical memory operations for CP/M
+            0x36: () => { this.w1(this.hl, this.next1()); this.cycles += 10; }, // LD (HL),n
+            0x77: () => { this.w1(this.hl, this.a); this.cycles += 7; }, // LD (HL),A
+            0x7E: () => { this.a = this.r1(this.hl); this.cycles += 7; }, // LD A,(HL)
+            0x46: () => { this.b = this.r1(this.hl); this.cycles += 7; }, // LD B,(HL)
+            0x4E: () => { this.c = this.r1(this.hl); this.cycles += 7; }, // LD C,(HL)
+            0x56: () => { this.d = this.r1(this.hl); this.cycles += 7; }, // LD D,(HL)
+            0x5E: () => { this.e = this.r1(this.hl); this.cycles += 7; }, // LD E,(HL)
+            0x66: () => { this.h = this.r1(this.hl); this.cycles += 7; }, // LD H,(HL)
+            0x6E: () => { this.l = this.r1(this.hl); this.cycles += 7; }, // LD L,(HL)
+            
+            // Critical arithmetic for CP/M
+            0x90: () => { this.a = this.sub1(this.a, this.b); this.cycles += 4; }, // SUB B
+            0x91: () => { this.a = this.sub1(this.a, this.c); this.cycles += 4; }, // SUB C
+            0x92: () => { this.a = this.sub1(this.a, this.d); this.cycles += 4; }, // SUB D
+            0x93: () => { this.a = this.sub1(this.a, this.e); this.cycles += 4; }, // SUB E
+            0x94: () => { this.a = this.sub1(this.a, this.h); this.cycles += 4; }, // SUB H
+            0x95: () => { this.a = this.sub1(this.a, this.l); this.cycles += 4; }, // SUB L
+            0x97: () => { this.a = this.sub1(this.a, this.a); this.cycles += 4; }, // SUB A
+            
+            // Critical increment/decrement for CP/M
+            0x3C: () => { this.a = this.inc1(this.a); this.cycles += 4; }, // INC A
+            0x04: () => { this.b = this.inc1(this.b); this.cycles += 4; }, // INC B
+            0x0C: () => { this.c = this.inc1(this.c); this.cycles += 4; }, // INC C
+            0x14: () => { this.d = this.inc1(this.d); this.cycles += 4; }, // INC D
+            0x1C: () => { this.e = this.inc1(this.e); this.cycles += 4; }, // INC E
+            0x24: () => { this.h = this.inc1(this.h); this.cycles += 4; }, // INC H
+            0x2C: () => { this.l = this.inc1(this.l); this.cycles += 4; }, // INC L
+            
+            0x3D: () => { this.a = this.dec1(this.a); this.cycles += 4; }, // DEC A
+            0x05: () => { this.b = this.dec1(this.b); this.cycles += 4; }, // DEC B
+            0x0D: () => { this.c = this.dec1(this.c); this.cycles += 4; }, // DEC C
+            0x15: () => { this.d = this.dec1(this.d); this.cycles += 4; }, // DEC D
+            0x1D: () => { this.e = this.dec1(this.e); this.cycles += 4; }, // DEC E
+            0x25: () => { this.h = this.dec1(this.h); this.cycles += 4; }, // DEC H
+            0x2D: () => { this.l = this.dec1(this.l); this.cycles += 4; }, // DEC L
+            
+            // Critical jumps for CP/M
+            0xCD: () => { this.push(this.pc + 2); this.pc = this.next2(); this.cycles += 17; }, // CALL nn
+            0xE9: () => { this.pc = this.hl; this.cycles += 4; }, // JP (HL)
+            
+            // Critical control for CP/M
+            0xF3: () => { this.iff1 = false; this.iff2 = false; this.cycles += 4; }, // DI
+            0xFB: () => { this.iff1 = true; this.iff2 = true; this.cycles += 4; }, // EI
         };
     }
 
