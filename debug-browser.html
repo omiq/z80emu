@@ -220,24 +220,24 @@
                             dbConnectionTimeout
                         ]);
                         log('Database connection established', 'success');
-                    
-                    // Create a simple CP/M boot sector
-                    const bootSector = [
-                        0xC3, 0x00, 0x01,  // JP 0x0100 (jump to CP/M entry point)
-                        0x00, 0x00, 0x00,  // NOPs
-                        0x00, 0x00, 0x00,  // NOPs
-                        0x00, 0x00, 0x00,  // NOPs
-                        0x00, 0x00, 0x00,  // NOPs
-                        0x00, 0x00, 0x00   // NOPs
-                    ];
-                    
-                    // Fill the rest with zeros
-                    const sectorData = new Array(128).fill(0);
-                    for (let i = 0; i < bootSector.length; i++) {
-                        sectorData[i] = bootSector[i];
-                    }
-                    
-                                            // Write the boot sector to the database
+                        
+                        // Create a simple CP/M boot sector
+                        const bootSector = [
+                            0xC3, 0x00, 0x01,  // JP 0x0100 (jump to CP/M entry point)
+                            0x00, 0x00, 0x00,  // NOPs
+                            0x00, 0x00, 0x00,  // NOPs
+                            0x00, 0x00, 0x00,  // NOPs
+                            0x00, 0x00, 0x00,  // NOPs
+                            0x00, 0x00, 0x00   // NOPs
+                        ];
+                        
+                        // Fill the rest with zeros
+                        const sectorData = new Array(128).fill(0);
+                        for (let i = 0; i < bootSector.length; i++) {
+                            sectorData[i] = bootSector[i];
+                        }
+                        
+                        // Write the boot sector to the database
                         log('Writing boot sector to database...', 'info');
                         log('Sector data length: ' + sectorData.length, 'info');
                         
@@ -265,14 +265,14 @@
                         
                         log('[OK] Test disk created successfully!', 'success');
                         log('Boot sector contains: ' + bootSector.map(b => '0x' + b.toString(16).padStart(2, '0')).join(' '), 'info');
-                    
-                                    } else {
-                        log('[ERROR] Database not available', 'error');
+                        
+                    } catch (dbError) {
+                        log(`[ERROR] Database operation failed: ${dbError.message}`, 'error');
+                        console.error('Database error:', dbError);
                     }
                     
-                } catch (dbError) {
-                    log(`[ERROR] Database operation failed: ${dbError.message}`, 'error');
-                    console.error('Database error:', dbError);
+                } else {
+                    log('[ERROR] Database not available', 'error');
                 }
                 
             } catch (error) {
