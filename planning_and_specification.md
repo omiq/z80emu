@@ -47,7 +47,7 @@ In the directory /Users/chrisg/github/cpm-emulator there is a working javascript
 
 ### Development Branch (Future Work)
 - **Goal**: Fix C compiler integration and disk capacity issues
-- **Branch Name**: `feature/c-compiler-fixes`
+- **Branch Name**: `feature/z80-library-integration`
 - **Features to implement**:
   - Fix Z80 instruction implementations for C compilers
   - Fix disk capacity and data storage issues
@@ -56,7 +56,13 @@ In the directory /Users/chrisg/github/cpm-emulator there is a working javascript
 
 ## Future Goals
 
-### Phase 1: Fix C Compiler Issues (Development Branch)
+### Phase 1: Fix C Compiler Issues (Development Branch) - 🚧 IN PROGRESS
+- [x] **Z80 Library Integration Setup**
+  - [x] Create development branch `feature/z80-library-integration`
+  - [x] Install z80-emulator npm packages
+  - [x] Create Z80 adapter for library compatibility
+  - [x] Create browser-compatible Z80 adapter
+  - [x] Add test files for verification
 - [ ] **Z80 Emulator Debugging**
   - [ ] Identify which Z80 instructions C.COM uses
   - [ ] Fix missing or incorrect Z80 instruction implementations
@@ -177,9 +183,40 @@ In the directory /Users/chrisg/github/cpm-emulator there is a working javascript
 3. **Test data storage**: Verify files fit and load correctly
 4. **Validate HiTech C disk**: Ensure full compiler fits
 
+## Z80 Library Integration Progress
+
+### Phase 1: Setup and Adapter Creation ✅ COMPLETED
+- **Branch Created**: `feature/z80-library-integration`
+- **Dependencies Installed**: z80-emulator, z80-base, z80-disasm
+- **Adapters Created**:
+  - `z80-adapter.js` - Node.js version using z80-emulator library
+  - `z80-adapter-browser.js` - Browser-compatible version with basic instruction set
+- **Test Files**: HTML test pages for verification
+- **Status**: Ready for integration testing
+
+### Phase 2: Integration and Testing 🚧 NEXT
+- [ ] **Test Z80 Adapter**: Verify basic instruction execution
+- [ ] **Integrate with Emulator**: Replace custom Z80 CPU with adapter
+- [ ] **Test CP/M Boot**: Ensure CP/M still boots correctly
+- [ ] **Test Basic Programs**: Verify existing functionality works
+
+### Phase 3: C Compiler Testing 🚧 PLANNED
+- [ ] **Test HiTech C**: Load and attempt to run C.COM
+- [ ] **Identify Missing Instructions**: Log any unimplemented Z80 instructions
+- [ ] **Add Missing Instructions**: Implement CB, ED, DD, FD prefix instructions
+- [ ] **Verify C Compiler**: Test end-to-end compilation workflow
+
+### Technical Approach
+1. **Browser Compatibility**: Created custom Z80 adapter since z80-emulator is ES module based
+2. **Instruction Coverage**: Started with basic Z80 instructions, will add advanced ones as needed
+3. **Interface Compatibility**: Adapter maintains same interface as existing Z80 emulator
+4. **Incremental Testing**: Test each phase before proceeding to next
+
 ---
 
 **Last Updated**: January 28, 2025
-**Status**: ✅ CONFIRMED WORKING - CP/M 2.2 emulator working (commit 64383a8), Microsoft BASIC and Star Trek confirmed running
+**Status**: 🚧 IN PROGRESS - Z80 library integration development branch created, Phase 1 completed
 **Working Commit**: 64383a8fac3250c1316d4078f64c8e20c5781ae9
+**Development Branch**: feature/z80-library-integration (commit 96a739a)
 **Tested**: ✅ Star Trek game loads and runs successfully on drive B:
+**Next**: Test Z80 adapter integration with existing emulator
