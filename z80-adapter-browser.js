@@ -431,11 +431,13 @@ class Z80Adapter {
         const d = this.disassembleInstruction(addr);
         r.push(this.pad(addr.toString(16), 4));
         r.push(": ");
-        for (let j = 0; j < d[0] - addr; j++) {
+        let j;
+        for (j = 0; j < d[0] - addr; j++) {
             r.push(this.pad(this.memio.rd(addr + j).toString(16), 2));
         }
-        while (j++ < 3) {
+        while (j < 3) {
             r.push("  ");
+            j++;
         }
         r.push(" ");
         r.push(d[1]);
