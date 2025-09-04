@@ -1,12 +1,14 @@
 # CP/M Emulator Development and Enhancement Plan
 
+In the directory /Users/chrisg/github/cpm-emulator there is a working javascript based project that *can* execute hi-tech C compiler and Rogue-VT.com locally on desktop using the mac/linux commandline (ie. has no interactive terminal, it is intended for testing software compiled for CP/M). This might be useful as reference to figure out why certain programs do not execute in our project, for example c compilers and games such as Rogue-VT
+
 ## Current Status ✅
 
 **CONFIRMED WORKING STATE**: The emulator is now confirmed working at commit `64383a8` where CP/M 2.2 boots correctly:
 - ✅ Boot CP/M 2.2 successfully and reach `A>` prompt
 - ✅ Switch between drives (A:, B:, C:, etc.)
 - ✅ Load and run basic CP/M programs
-- ✅ Execute .COM files from disk images
+- ✅ Execute *some* .COM files from disk images
 - ✅ Microsoft BASIC works correctly on drive B:
 - ✅ **CONFIRMED**: Successfully loaded and ran Star Trek (.BAS) in Microsoft BASIC
 
