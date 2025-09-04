@@ -170,6 +170,51 @@ class Z80Adapter {
             // Critical control for CP/M
             0xF3: () => { this.iff1 = false; this.iff2 = false; this.cycles += 4; }, // DI
             0xFB: () => { this.iff1 = true; this.iff2 = true; this.cycles += 4; }, // EI
+            
+            // More critical instructions for CP/M boot
+            0x32: () => { this.w1(this.next2(), this.a); this.cycles += 13; }, // LD (nn),A
+            0x3A: () => { this.a = this.r1(this.next2()); this.cycles += 13; }, // LD A,(nn)
+            0x22: () => { this.w2(this.next2(), this.hl); this.cycles += 16; }, // LD (nn),HL
+            0x2A: () => { this.hl = this.r2(this.next2()); this.cycles += 16; }, // LD HL,(nn)
+            
+            // Logical operations
+            0xA0: () => { this.a = this.a & this.b; this.cycles += 4; }, // AND B
+            0xA1: () => { this.a = this.a & this.c; this.cycles += 4; }, // AND C
+            0xA2: () => { this.a = this.a & this.d; this.cycles += 4; }, // AND D
+            0xA3: () => { this.a = this.a & this.e; this.cycles += 4; }, // AND E
+            0xA4: () => { this.a = this.a & this.h; this.cycles += 4; }, // AND H
+            0xA5: () => { this.a = this.a & this.l; this.cycles += 4; }, // AND L
+            0xA6: () => { this.a = this.a & this.r1(this.hl); this.cycles += 7; }, // AND (HL)
+            0xE6: () => { this.a = this.a & this.next1(); this.cycles += 7; }, // AND n
+            
+            0xB0: () => { this.a = this.a | this.b; this.cycles += 4; }, // OR B
+            0xB1: () => { this.a = this.a | this.c; this.cycles += 4; }, // OR C
+            0xB2: () => { this.a = this.a | this.d; this.cycles += 4; }, // OR D
+            0xB3: () => { this.a = this.a | this.e; this.cycles += 4; }, // OR E
+            0xB4: () => { this.a = this.a | this.h; this.cycles += 4; }, // OR H
+            0xB5: () => { this.a = this.a | this.l; this.cycles += 4; }, // OR L
+            0xB6: () => { this.a = this.a | this.r1(this.hl); this.cycles += 7; }, // OR (HL)
+            0xF6: () => { this.a = this.a | this.next1(); this.cycles += 7; }, // OR n
+            
+            // Compare operations
+            0xB8: () => { this.sub1(this.a, this.b); this.cycles += 4; }, // CP B
+            0xB9: () => { this.sub1(this.a, this.c); this.cycles += 4; }, // CP C
+            0xBA: () => { this.sub1(this.a, this.d); this.cycles += 4; }, // CP D
+            0xBB: () => { this.sub1(this.a, this.e); this.cycles += 4; }, // CP E
+            0xBC: () => { this.sub1(this.a, this.h); this.cycles += 4; }, // CP H
+            0xBD: () => { this.sub1(this.a, this.l); this.cycles += 4; }, // CP L
+            0xBE: () => { this.sub1(this.a, this.r1(this.hl)); this.cycles += 7; }, // CP (HL)
+            0xFE: () => { this.sub1(this.a, this.next1()); this.cycles += 7; }, // CP n
+            
+            // More jumps and calls
+            0xC0: () => { if (!this.zf) { this.pc = this.pop(); this.cycles += 11; } else { this.cycles += 5; } }, // RET NZ
+            0xC8: () => { if (this.zf) { this.pc = this.pop(); this.cycles += 11; } else { this.cycles += 5; } }, // RET Z
+            0xD0: () => { if (!this.cf) { this.pc = this.pop(); this.cycles += 11; } else { this.cycles += 5; } }, // RET NC
+            0xD8: () => { if (this.cf) { this.pc = this.pop(); this.cycles += 11; } else { this.cycles += 5; } }, // RET C
+            
+            // Rotate and shift operations
+            0x07: () => { this.a = ((this.a << 1) | (this.a >> 7)) & 0xFF; this.cf = (this.a & 0x01) !== 0; this.cycles += 4; }, // RLCA
+            0x0F: () => { this.a = ((this.a >> 1) | (this.a << 7)) & 0xFF; this.cf = (this.a & 0x80) !== 0; this.cycles += 4; }, // RRCA
         };
     }
 
@@ -184,11 +229,17 @@ class Z80Adapter {
             const opcode = this.next1();
             const instruction = this.instructions[opcode];
             
+            // Debug logging for first few steps
+            if (this.pc < 0x100) {
+                console.log(`🔍 Z80 Step: PC=0x${(this.pc - 1).toString(16).padStart(4, '0')}, Opcode=0x${opcode.toString(16).padStart(2, '0')}, A=0x${this.a.toString(16).padStart(2, '0')}`);
+            }
+            
             if (instruction) {
                 instruction();
                 return true;
             } else {
-                console.warn(`Unimplemented instruction: 0x${opcode.toString(16).padStart(2, '0')} at PC=0x${this.pc.toString(16).padStart(4, '0')}`);
+                console.error(`❌ UNIMPLEMENTED INSTRUCTION: 0x${opcode.toString(16).padStart(2, '0')} at PC=0x${(this.pc - 1).toString(16).padStart(4, '0')}`);
+                console.error(`   This instruction is needed for CP/M to boot!`);
                 this.cycles += 4;
                 return false;
             }
@@ -364,6 +415,11 @@ class Z80Adapter {
             if (value & (1 << i)) parity++;
         }
         return (parity & 1) === 0;
+    }
+    
+    // Debug helper
+    debugStep() {
+        console.log(`🔍 Z80 Step: PC=0x${this.pc.toString(16).padStart(4, '0')}, A=0x${this.a.toString(16).padStart(2, '0')}, F=0x${this.f.toString(16).padStart(2, '0')}`);
     }
 
     inc1(value) {
