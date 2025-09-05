@@ -344,11 +344,7 @@ class Z80Adapter {
                 this.a = this.srl1(this.a);
                 this.cycles += 8;
             }, // SRL A
-            0xCBF4: () => { // SET 7,H (Set bit 7 of H register)
-                this.h |= 0x80;
-                this.cycles += 8;
-            }, // SET 7,H
-            0xCBF4: () => { // SET 7,H (Set bit 7 of H register)
+            0xCBFC: () => { // SET 7,H (Set bit 7 of H register)
                 this.h |= 0x80;
                 this.cycles += 8;
             }, // SET 7,H
@@ -463,6 +459,8 @@ class Z80Adapter {
 
             // Common zeroing of A used in boot code
             0xA8: () => { this.a = this.xorByte(this.a, this.b); this.cycles += 4; }, // XOR B
+            0xAA: () => { this.a = this.xorByte(this.a, this.d); this.cycles += 4; }, // XOR D
+            0xAB: () => { this.a = this.xorByte(this.a, this.e); this.cycles += 4; }, // XOR E
             0xAF: () => { this.a = 0; this.zf = true; this.sf = false; this.pf = true; this.cf = false; this.hf = false; this.nf = false; this.cycles += 4; }, // XOR A
             
             // OR operations - CRITICAL FOR CP/M BOOT!
@@ -1019,6 +1017,17 @@ class Z80Adapter {
         this.cf = (v & 0x01) !== 0;
         this.zf = (result === 0);
         this.sf = false;
+        this.hf = false;
+        this.pf = this.calcParity(result);
+        this.nf = false;
+        return result;
+    }
+
+    sll1(v) { // SLL r - Shift Left Logical (undocumented Z80 instruction)
+        const result = ((v << 1) | 0x01) & 0xFF; // Shift left and set bit 0 to 1
+        this.cf = (v & 0x80) !== 0; // Carry flag gets the bit that was shifted out
+        this.zf = (result === 0);
+        this.sf = (result & 0x80) !== 0;
         this.hf = false;
         this.pf = this.calcParity(result);
         this.nf = false;

@@ -1,5 +1,11 @@
 # CP/M Emulator Development and Enhancement Plan
 
+Important guardrails:
+- Use the combined key approach (prefix*0x100 + opcode) for CB prefix instructions like 0xCBFC.
+- If CB FC already exists, say "already implemented" and stop.
+
+## Reference project
+
 In the directory /Users/chrisg/github/cpm-emulator there is a working javascript based project that *can* execute hi-tech C compiler and Rogue-VT.com locally on desktop using the mac/linux commandline (ie. has no interactive terminal, it is intended for testing software compiled for CP/M). This might be useful as reference to figure out why certain programs do not execute in our project, for example c compilers and games such as Rogue-VT
 
 ## Current Status ✅
@@ -13,11 +19,13 @@ In the directory /Users/chrisg/github/cpm-emulator there is a working javascript
 - ✅ 0xFD77 (LD (IY+d),A) - Store A to IY+displacement
 - ✅ 0xFD19 (ADD IY,DE) - Add DE to IY register
 - ✅ 0xDD34 (INC (IX+d)) - Increment memory at IX+displacement
-- ✅ 0xCBF4 (SET 7,H) - Set bit 7 of H register
+- ✅ 0xCBFC (SET 7,H) - Set bit 7 of H register - **FIXED INSTRUCTION KEY**
+- ✅ 0xAA (XOR D) - XOR register D with accumulator A
+- ✅ 0xAB (XOR E) - XOR register E with accumulator A
 
-**Current Issue**: 0xCBF4 instruction still showing as unimplemented despite implementation
-**Cache Version**: v=2025.01.28.1063
-**Next Steps**: Debug why 0xCBF4 implementation isn't being recognized
+**Current Status**: CP/M progressing through boot sequence - SET 7,H, XOR D, and XOR E now working
+**Cache Version**: v=2025-09-05_18.56.05
+**Latest Progress**: CP/M advanced from PC=0x053f → PC=0x3972 → PC=0x3975, indicating successful instruction implementations
 
 **CONFIRMED WORKING STATE**: The emulator is confirmed working at commit `64383a8` where CP/M 2.2 boots correctly:
 - ✅ Boot CP/M 2.2 successfully and reach `A>` prompt
@@ -467,3 +475,58 @@ Our Z80Adapter now supports:
 - **Testing Strategy**: Systematic error-driven development with immediate validation
 
 **This systematic approach is building a robust, complete Z80 emulator capable of running complex CP/M programs including C compilers!**
+
+---
+
+## 🎯 CURRENT SESSION PROGRESS (January 28, 2025)
+
+### Session Overview
+**Goal**: Fix missing Z80 instructions preventing CP/M boot
+**Approach**: Error-driven development - implement instructions as they are encountered
+**Status**: Successfully progressing through CP/M boot sequence
+
+### Instructions Implemented This Session
+
+#### 1. SET 7,H Instruction (0xCBFC) ✅ COMPLETED
+- **Problem**: `UNIMPLEMENTED INSTRUCTION: 0xcbfc at PC=0x053f`
+- **Root Cause**: Incorrect instruction key (was using wrong hex value, corrected to 0xCBFC)
+- **Solution**: Fixed instruction key and implementation
+- **Implementation**: `this.h |= 0x80` (sets bit 7 of H register)
+- **Cycles**: 8 T-states
+- **Result**: CP/M advanced from PC=0x053f to PC=0x3972
+
+#### 2. XOR D Instruction (0xAA) ✅ COMPLETED  
+- **Problem**: `UNIMPLEMENTED INSTRUCTION: 0xaa at PC=0x3972`
+- **Root Cause**: Missing XOR D instruction implementation
+- **Solution**: Added XOR D instruction to instruction table
+- **Implementation**: `this.a = this.xorByte(this.a, this.d)` (XOR D with A)
+- **Cycles**: 4 T-states
+- **Result**: CP/M continued boot sequence
+
+#### 3. XOR E Instruction (0xAB) ✅ COMPLETED
+- **Problem**: `UNIMPLEMENTED INSTRUCTION: 0xab at PC=0x3975`
+- **Root Cause**: Missing XOR E instruction implementation
+- **Solution**: Added XOR E instruction to instruction table
+- **Implementation**: `this.a = this.xorByte(this.a, this.e)` (XOR E with A)
+- **Cycles**: 4 T-states
+- **Result**: CP/M continued boot sequence
+
+### Technical Details
+- **Cache Busting**: Updated to v=2025-09-05_18.56.05
+- **Documentation**: Updated z80_instructions.md with correct instruction keys
+- **Progress Tracking**: CP/M successfully advancing through boot sequence (PC: 0x053f → 0x3972 → 0x3975)
+- **Method**: Systematic error-driven development with immediate testing
+
+### Next Steps
+1. **Continue monitoring** for additional missing instructions
+2. **Implement instructions** as they are encountered during CP/M boot
+3. **Maintain documentation** with each instruction addition
+4. **Track progress** through PC advancement in boot sequence
+
+### Lessons Learned
+- **Instruction Key Accuracy**: Critical to use correct hex values for combined prefix+opcode keys
+- **Error-Driven Development**: Effective approach for building complete instruction set
+- **Documentation**: Essential to maintain detailed progress trail
+- **Cache Management**: Important to update cache busting with each change
+
+**Current Status**: CP/M boot sequence progressing successfully with systematic instruction implementation
