@@ -13,6 +13,14 @@ In the directory /Users/chrisg/github/cpm-emulator there is a working javascript
 **ACTIVE DEVELOPMENT**: Currently implementing missing Z80 instructions for CP/M compatibility on branch `feature/z80-library-integration` (commit `7d8ee39`):
 
 **Recently Implemented Instructions**:
+- ✅ **COMPLETE CB PREFIX SET** - All 256 CB prefix instructions implemented
+- ✅ 0xCB00-0xCB0F (RLC/RRC) - Rotate circular instructions for all registers
+- ✅ 0xCB10-0xCB1F (RL/RR) - Rotate through carry instructions for all registers  
+- ✅ 0xCB20-0xCB2F (SLA/SRA) - Shift arithmetic instructions for all registers
+- ✅ 0xCB30-0xCB3F (SLL/SRL) - Shift logical instructions for all registers (including undocumented SLL)
+- ✅ 0xCB40-0xCB7F (BIT) - Bit test instructions for all registers and memory
+- ✅ 0xCB80-0xCBBF (RES) - Reset bit instructions for all registers and memory
+- ✅ 0xCBC0-0xCBFF (SET) - Set bit instructions for all registers and memory
 - ✅ 0xFD56 (LD D,(IY+d)) - Load D from IY+displacement
 - ✅ 0xFD75 (LD (IY+d),L) - Store L to IY+displacement  
 - ✅ 0xFD74 (LD (IY+d),H) - Store H to IY+displacement
@@ -37,9 +45,9 @@ In the directory /Users/chrisg/github/cpm-emulator there is a working javascript
 - ✅ 0xCB86 (RES 0,(HL)) - Reset bit 0 of memory at HL
 - ✅ 0xCBFE (SET 7,(HL)) - Set bit 7 of memory at HL
 
-**Current Status**: CP/M critical instruction set now 100% implemented - all missing instructions added
-**Cache Version**: v=2025-09-05_18.56.06
-**Latest Progress**: Complete CP/M instruction coverage achieved - ready for full CP/M boot testing
+**Current Status**: Complete CB prefix instruction set implemented (256/256) - Z80 emulator now has full bit manipulation support
+**Cache Version**: v=2025-09-05_18.56.07
+**Latest Progress**: All CB prefix instructions implemented - rotate, shift, bit test, reset, and set operations complete
 
 **CONFIRMED WORKING STATE**: The emulator is confirmed working at commit `64383a8` where CP/M 2.2 boots correctly:
 - ✅ Boot CP/M 2.2 successfully and reach `A>` prompt

@@ -1,0 +1,79 @@
+Prefix,Opcode,Mnemonic,Bytes,Cycles
+00,,NOP,1,4
+76,,HALT,1,4
+C3,,JP nn,3,10
+C2,,"JP NZ,nn",3,10
+CA,,"JP Z,nn",3,10
+D2,,"JP NC,nn",3,10
+DA,,"JP C,nn",3,10
+E9,,JP (HL),1,4
+CD,,CALL nn,3,17
+C9,,RET,1,10
+C0,,RET NZ,1,11/5
+C8,,RET Z,1,11/5
+D0,,RET NC,1,11/5
+D8,,RET C,1,11/5
+C5,,PUSH BC,1,11
+D5,,PUSH DE,1,11
+E5,,PUSH HL,1,11
+F5,,PUSH AF,1,11
+C1,,POP BC,1,10
+D1,,POP DE,1,10
+E1,,POP HL,1,10
+F1,,POP AF,1,10
+3A,,"LD A,(nn)",3,13
+32,,"LD (nn),A",3,13
+2A,,"LD HL,(nn)",3,16
+22,,"LD (nn),HL",3,16
+01,,"LD BC,nn",3,10
+11,,"LD DE,nn",3,10
+21,,"LD HL,nn",3,10
+31,,"LD SP,nn",3,10
+EB,,"EX DE,HL",1,4
+87,,"ADD A,A",1,4
+80,,"ADD A,B",1,4
+81,,"ADD A,C",1,4
+82,,"ADD A,D",1,4
+83,,"ADD A,E",1,4
+84,,"ADD A,H",1,4
+85,,"ADD A,L",1,4
+86,,"ADD A,(HL)",1,7
+C6,,"ADD A,n",2,7
+8F,,"ADC A,A",1,4
+CE,,"ADC A,n",2,7
+97,,SUB A,1,4
+D6,,SUB n,2,7
+B7,,OR A,1,4
+F6,,OR n,2,7
+A7,,AND A,1,4
+E6,,AND n,2,7
+AF,,XOR A,1,4
+EE,,XOR n,2,7
+BF,,CP A,1,4
+FE,,CP n,2,7
+04,,INC B,1,4
+05,,DEC B,1,4
+0C,,INC C,1,4
+0D,,DEC C,1,4
+14,,INC D,1,4
+15,,DEC D,1,4
+1C,,INC E,1,4
+1D,,DEC E,1,4
+24,,INC H,1,4
+25,,DEC H,1,4
+2C,,INC L,1,4
+2D,,DEC L,1,4
+34,,INC (HL),1,11
+35,,DEC (HL),1,11
+ED,A0,LDI,2,16
+ED,B0,LDIR,2,21
+ED,A1,CPI,2,16
+ED,B1,CPIR,2,21
+ED,A2,INI,2,16
+ED,B2,INIR,2,21
+ED,A3,OUTI,2,16
+ED,B3,OTIR,2,21
+CB,46,"BIT 0,(HL)",2,12
+CB,7E,"BIT 7,(HL)",2,12
+CB,86,"RES 0,(HL)",2,15
+CB,FE,"SET 7,(HL)",2,15

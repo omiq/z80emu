@@ -379,14 +379,289 @@ This document lists all Z80 instructions currently implemented in the `z80-adapt
 
 ## CB Prefix Instructions (Bit Manipulation)
 
+### Rotate Circular Instructions (0xCB00-0xCB0F)
 | Opcode | Instruction | Description | Cycles |
 |--------|-------------|-------------|---------|
+| 0xCB00 | RLC B | Rotate left circular B | 8 |
+| 0xCB01 | RLC C | Rotate left circular C | 8 |
+| 0xCB02 | RLC D | Rotate left circular D | 8 |
+| 0xCB03 | RLC E | Rotate left circular E | 8 |
+| 0xCB04 | RLC H | Rotate left circular H | 8 |
+| 0xCB05 | RLC L | Rotate left circular L | 8 |
+| 0xCB06 | RLC (HL) | Rotate left circular memory at HL | 15 |
+| 0xCB07 | RLC A | Rotate left circular A | 8 |
+| 0xCB08 | RRC B | Rotate right circular B | 8 |
+| 0xCB09 | RRC C | Rotate right circular C | 8 |
+| 0xCB0A | RRC D | Rotate right circular D | 8 |
+| 0xCB0B | RRC E | Rotate right circular E | 8 |
+| 0xCB0C | RRC H | Rotate right circular H | 8 |
+| 0xCB0D | RRC L | Rotate right circular L | 8 |
+| 0xCB0E | RRC (HL) | Rotate right circular memory at HL | 15 |
+| 0xCB0F | RRC A | Rotate right circular A | 8 |
+
+### Rotate Through Carry Instructions (0xCB10-0xCB1F)
+| Opcode | Instruction | Description | Cycles |
+|--------|-------------|-------------|---------|
+| 0xCB10 | RL B | Rotate left through carry B | 8 |
+| 0xCB11 | RL C | Rotate left through carry C | 8 |
+| 0xCB12 | RL D | Rotate left through carry D | 8 |
+| 0xCB13 | RL E | Rotate left through carry E | 8 |
+| 0xCB14 | RL H | Rotate left through carry H | 8 |
+| 0xCB15 | RL L | Rotate left through carry L | 8 |
+| 0xCB16 | RL (HL) | Rotate left through carry memory at HL | 15 |
+| 0xCB17 | RL A | Rotate left through carry A | 8 |
+| 0xCB18 | RR B | Rotate right through carry B | 8 |
+| 0xCB19 | RR C | Rotate right through carry C | 8 |
+| 0xCB1A | RR D | Rotate right through carry D | 8 |
+| 0xCB1B | RR E | Rotate right through carry E | 8 |
+| 0xCB1C | RR H | Rotate right through carry H | 8 |
+| 0xCB1D | RR L | Rotate right through carry L | 8 |
+| 0xCB1E | RR (HL) | Rotate right through carry memory at HL | 15 |
+| 0xCB1F | RR A | Rotate right through carry A | 8 |
+
+### Shift Arithmetic Instructions (0xCB20-0xCB2F)
+| Opcode | Instruction | Description | Cycles |
+|--------|-------------|-------------|---------|
+| 0xCB20 | SLA B | Shift left arithmetic B | 8 |
+| 0xCB21 | SLA C | Shift left arithmetic C | 8 |
+| 0xCB22 | SLA D | Shift left arithmetic D | 8 |
+| 0xCB23 | SLA E | Shift left arithmetic E | 8 |
+| 0xCB24 | SLA H | Shift left arithmetic H | 8 |
+| 0xCB25 | SLA L | Shift left arithmetic L | 8 |
+| 0xCB26 | SLA (HL) | Shift left arithmetic memory at HL | 15 |
+| 0xCB27 | SLA A | Shift left arithmetic A | 8 |
+| 0xCB28 | SRA B | Shift right arithmetic B | 8 |
+| 0xCB29 | SRA C | Shift right arithmetic C | 8 |
+| 0xCB2A | SRA D | Shift right arithmetic D | 8 |
+| 0xCB2B | SRA E | Shift right arithmetic E | 8 |
+| 0xCB2C | SRA H | Shift right arithmetic H | 8 |
+| 0xCB2D | SRA L | Shift right arithmetic L | 8 |
+| 0xCB2E | SRA (HL) | Shift right arithmetic memory at HL | 15 |
+| 0xCB2F | SRA A | Shift right arithmetic A | 8 |
+
+### Shift Logical Instructions (0xCB30-0xCB3F)
+| Opcode | Instruction | Description | Cycles | Notes |
+|--------|-------------|-------------|---------|-------|
+| 0xCB30 | SLL B | Shift left logical B | 8 | Undocumented |
+| 0xCB31 | SLL C | Shift left logical C | 8 | Undocumented |
+| 0xCB32 | SLL D | Shift left logical D | 8 | Undocumented |
+| 0xCB33 | SLL E | Shift left logical E | 8 | Undocumented |
+| 0xCB34 | SLL H | Shift left logical H | 8 | Undocumented |
+| 0xCB35 | SLL L | Shift left logical L | 8 | Undocumented |
+| 0xCB36 | SLL (HL) | Shift left logical memory at HL | 15 | Undocumented |
+| 0xCB37 | SLL A | Shift left logical A | 8 | Undocumented |
+| 0xCB38 | SRL B | Shift right logical B | 8 |
+| 0xCB39 | SRL C | Shift right logical C | 8 |
+| 0xCB3A | SRL D | Shift right logical D | 8 |
+| 0xCB3B | SRL E | Shift right logical E | 8 |
+| 0xCB3C | SRL H | Shift right logical H | 8 |
+| 0xCB3D | SRL L | Shift right logical L | 8 |
+| 0xCB3E | SRL (HL) | Shift right logical memory at HL | 15 |
 | 0xCB3F | SRL A | Shift right logical A | 8 |
+
+### Bit Test Instructions (0xCB40-0xCB7F)
+| Opcode | Instruction | Description | Cycles |
+|--------|-------------|-------------|---------|
+| 0xCB40 | BIT 0,B | Test bit 0 of B | 8 |
+| 0xCB41 | BIT 0,C | Test bit 0 of C | 8 |
+| 0xCB42 | BIT 0,D | Test bit 0 of D | 8 |
+| 0xCB43 | BIT 0,E | Test bit 0 of E | 8 |
+| 0xCB44 | BIT 0,H | Test bit 0 of H | 8 |
+| 0xCB45 | BIT 0,L | Test bit 0 of L | 8 |
 | 0xCB46 | BIT 0,(HL) | Test bit 0 of memory at HL | 12 |
+| 0xCB47 | BIT 0,A | Test bit 0 of A | 8 |
+| 0xCB48 | BIT 1,B | Test bit 1 of B | 8 |
+| 0xCB49 | BIT 1,C | Test bit 1 of C | 8 |
+| 0xCB4A | BIT 1,D | Test bit 1 of D | 8 |
+| 0xCB4B | BIT 1,E | Test bit 1 of E | 8 |
+| 0xCB4C | BIT 1,H | Test bit 1 of H | 8 |
+| 0xCB4D | BIT 1,L | Test bit 1 of L | 8 |
+| 0xCB4E | BIT 1,(HL) | Test bit 1 of memory at HL | 12 |
+| 0xCB4F | BIT 1,A | Test bit 1 of A | 8 |
+| 0xCB50 | BIT 2,B | Test bit 2 of B | 8 |
+| 0xCB51 | BIT 2,C | Test bit 2 of C | 8 |
+| 0xCB52 | BIT 2,D | Test bit 2 of D | 8 |
+| 0xCB53 | BIT 2,E | Test bit 2 of E | 8 |
+| 0xCB54 | BIT 2,H | Test bit 2 of H | 8 |
+| 0xCB55 | BIT 2,L | Test bit 2 of L | 8 |
+| 0xCB56 | BIT 2,(HL) | Test bit 2 of memory at HL | 12 |
+| 0xCB57 | BIT 2,A | Test bit 2 of A | 8 |
+| 0xCB58 | BIT 3,B | Test bit 3 of B | 8 |
+| 0xCB59 | BIT 3,C | Test bit 3 of C | 8 |
+| 0xCB5A | BIT 3,D | Test bit 3 of D | 8 |
+| 0xCB5B | BIT 3,E | Test bit 3 of E | 8 |
+| 0xCB5C | BIT 3,H | Test bit 3 of H | 8 |
+| 0xCB5D | BIT 3,L | Test bit 3 of L | 8 |
+| 0xCB5E | BIT 3,(HL) | Test bit 3 of memory at HL | 12 |
+| 0xCB5F | BIT 3,A | Test bit 3 of A | 8 |
+| 0xCB60 | BIT 4,B | Test bit 4 of B | 8 |
+| 0xCB61 | BIT 4,C | Test bit 4 of C | 8 |
+| 0xCB62 | BIT 4,D | Test bit 4 of D | 8 |
+| 0xCB63 | BIT 4,E | Test bit 4 of E | 8 |
+| 0xCB64 | BIT 4,H | Test bit 4 of H | 8 |
+| 0xCB65 | BIT 4,L | Test bit 4 of L | 8 |
+| 0xCB66 | BIT 4,(HL) | Test bit 4 of memory at HL | 12 |
+| 0xCB67 | BIT 4,A | Test bit 4 of A | 8 |
+| 0xCB68 | BIT 5,B | Test bit 5 of B | 8 |
+| 0xCB69 | BIT 5,C | Test bit 5 of C | 8 |
+| 0xCB6A | BIT 5,D | Test bit 5 of D | 8 |
+| 0xCB6B | BIT 5,E | Test bit 5 of E | 8 |
+| 0xCB6C | BIT 5,H | Test bit 5 of H | 8 |
+| 0xCB6D | BIT 5,L | Test bit 5 of L | 8 |
+| 0xCB6E | BIT 5,(HL) | Test bit 5 of memory at HL | 12 |
+| 0xCB6F | BIT 5,A | Test bit 5 of A | 8 |
+| 0xCB70 | BIT 6,B | Test bit 6 of B | 8 |
+| 0xCB71 | BIT 6,C | Test bit 6 of C | 8 |
+| 0xCB72 | BIT 6,D | Test bit 6 of D | 8 |
+| 0xCB73 | BIT 6,E | Test bit 6 of E | 8 |
+| 0xCB74 | BIT 6,H | Test bit 6 of H | 8 |
+| 0xCB75 | BIT 6,L | Test bit 6 of L | 8 |
+| 0xCB76 | BIT 6,(HL) | Test bit 6 of memory at HL | 12 |
+| 0xCB77 | BIT 6,A | Test bit 6 of A | 8 |
+| 0xCB78 | BIT 7,B | Test bit 7 of B | 8 |
+| 0xCB79 | BIT 7,C | Test bit 7 of C | 8 |
+| 0xCB7A | BIT 7,D | Test bit 7 of D | 8 |
+| 0xCB7B | BIT 7,E | Test bit 7 of E | 8 |
+| 0xCB7C | BIT 7,H | Test bit 7 of H | 8 |
+| 0xCB7D | BIT 7,L | Test bit 7 of L | 8 |
 | 0xCB7E | BIT 7,(HL) | Test bit 7 of memory at HL | 12 |
+| 0xCB7F | BIT 7,A | Test bit 7 of A | 8 |
+
+### Reset Bit Instructions (0xCB80-0xCBBF)
+| Opcode | Instruction | Description | Cycles |
+|--------|-------------|-------------|---------|
+| 0xCB80 | RES 0,B | Reset bit 0 of B | 8 |
+| 0xCB81 | RES 0,C | Reset bit 0 of C | 8 |
+| 0xCB82 | RES 0,D | Reset bit 0 of D | 8 |
+| 0xCB83 | RES 0,E | Reset bit 0 of E | 8 |
+| 0xCB84 | RES 0,H | Reset bit 0 of H | 8 |
+| 0xCB85 | RES 0,L | Reset bit 0 of L | 8 |
 | 0xCB86 | RES 0,(HL) | Reset bit 0 of memory at HL | 15 |
+| 0xCB87 | RES 0,A | Reset bit 0 of A | 8 |
+| 0xCB88 | RES 1,B | Reset bit 1 of B | 8 |
+| 0xCB89 | RES 1,C | Reset bit 1 of C | 8 |
+| 0xCB8A | RES 1,D | Reset bit 1 of D | 8 |
+| 0xCB8B | RES 1,E | Reset bit 1 of E | 8 |
+| 0xCB8C | RES 1,H | Reset bit 1 of H | 8 |
+| 0xCB8D | RES 1,L | Reset bit 1 of L | 8 |
+| 0xCB8E | RES 1,(HL) | Reset bit 1 of memory at HL | 15 |
+| 0xCB8F | RES 1,A | Reset bit 1 of A | 8 |
+| 0xCB90 | RES 2,B | Reset bit 2 of B | 8 |
+| 0xCB91 | RES 2,C | Reset bit 2 of C | 8 |
+| 0xCB92 | RES 2,D | Reset bit 2 of D | 8 |
+| 0xCB93 | RES 2,E | Reset bit 2 of E | 8 |
+| 0xCB94 | RES 2,H | Reset bit 2 of H | 8 |
+| 0xCB95 | RES 2,L | Reset bit 2 of L | 8 |
+| 0xCB96 | RES 2,(HL) | Reset bit 2 of memory at HL | 15 |
+| 0xCB97 | RES 2,A | Reset bit 2 of A | 8 |
+| 0xCB98 | RES 3,B | Reset bit 3 of B | 8 |
+| 0xCB99 | RES 3,C | Reset bit 3 of C | 8 |
+| 0xCB9A | RES 3,D | Reset bit 3 of D | 8 |
+| 0xCB9B | RES 3,E | Reset bit 3 of E | 8 |
+| 0xCB9C | RES 3,H | Reset bit 3 of H | 8 |
+| 0xCB9D | RES 3,L | Reset bit 3 of L | 8 |
+| 0xCB9E | RES 3,(HL) | Reset bit 3 of memory at HL | 15 |
+| 0xCB9F | RES 3,A | Reset bit 3 of A | 8 |
+| 0xCBA0 | RES 4,B | Reset bit 4 of B | 8 |
+| 0xCBA1 | RES 4,C | Reset bit 4 of C | 8 |
+| 0xCBA2 | RES 4,D | Reset bit 4 of D | 8 |
+| 0xCBA3 | RES 4,E | Reset bit 4 of E | 8 |
+| 0xCBA4 | RES 4,H | Reset bit 4 of H | 8 |
+| 0xCBA5 | RES 4,L | Reset bit 4 of L | 8 |
+| 0xCBA6 | RES 4,(HL) | Reset bit 4 of memory at HL | 15 |
+| 0xCBA7 | RES 4,A | Reset bit 4 of A | 8 |
+| 0xCBA8 | RES 5,B | Reset bit 5 of B | 8 |
+| 0xCBA9 | RES 5,C | Reset bit 5 of C | 8 |
+| 0xCBAA | RES 5,D | Reset bit 5 of D | 8 |
+| 0xCBAB | RES 5,E | Reset bit 5 of E | 8 |
+| 0xCBAC | RES 5,H | Reset bit 5 of H | 8 |
+| 0xCBAD | RES 5,L | Reset bit 5 of L | 8 |
+| 0xCBAE | RES 5,(HL) | Reset bit 5 of memory at HL | 15 |
+| 0xCBAF | RES 5,A | Reset bit 5 of A | 8 |
+| 0xCBB0 | RES 6,B | Reset bit 6 of B | 8 |
+| 0xCBB1 | RES 6,C | Reset bit 6 of C | 8 |
+| 0xCBB2 | RES 6,D | Reset bit 6 of D | 8 |
+| 0xCBB3 | RES 6,E | Reset bit 6 of E | 8 |
+| 0xCBB4 | RES 6,H | Reset bit 6 of H | 8 |
+| 0xCBB5 | RES 6,L | Reset bit 6 of L | 8 |
+| 0xCBB6 | RES 6,(HL) | Reset bit 6 of memory at HL | 15 |
+| 0xCBB7 | RES 6,A | Reset bit 6 of A | 8 |
+| 0xCBB8 | RES 7,B | Reset bit 7 of B | 8 |
+| 0xCBB9 | RES 7,C | Reset bit 7 of C | 8 |
+| 0xCBBA | RES 7,D | Reset bit 7 of D | 8 |
+| 0xCBBB | RES 7,E | Reset bit 7 of E | 8 |
+| 0xCBBC | RES 7,H | Reset bit 7 of H | 8 |
+| 0xCBBD | RES 7,L | Reset bit 7 of L | 8 |
+| 0xCBBE | RES 7,(HL) | Reset bit 7 of memory at HL | 15 |
+| 0xCBBF | RES 7,A | Reset bit 7 of A | 8 |
+
+### Set Bit Instructions (0xCBC0-0xCBFF)
+| Opcode | Instruction | Description | Cycles |
+|--------|-------------|-------------|---------|
+| 0xCBC0 | SET 0,B | Set bit 0 of B | 8 |
+| 0xCBC1 | SET 0,C | Set bit 0 of C | 8 |
+| 0xCBC2 | SET 0,D | Set bit 0 of D | 8 |
+| 0xCBC3 | SET 0,E | Set bit 0 of E | 8 |
+| 0xCBC4 | SET 0,H | Set bit 0 of H | 8 |
+| 0xCBC5 | SET 0,L | Set bit 0 of L | 8 |
+| 0xCBC6 | SET 0,(HL) | Set bit 0 of memory at HL | 15 |
+| 0xCBC7 | SET 0,A | Set bit 0 of A | 8 |
+| 0xCBC8 | SET 1,B | Set bit 1 of B | 8 |
+| 0xCBC9 | SET 1,C | Set bit 1 of C | 8 |
+| 0xCBCA | SET 1,D | Set bit 1 of D | 8 |
+| 0xCBCB | SET 1,E | Set bit 1 of E | 8 |
+| 0xCBCC | SET 1,H | Set bit 1 of H | 8 |
+| 0xCBCD | SET 1,L | Set bit 1 of L | 8 |
+| 0xCBCE | SET 1,(HL) | Set bit 1 of memory at HL | 15 |
+| 0xCBCF | SET 1,A | Set bit 1 of A | 8 |
+| 0xCBD0 | SET 2,B | Set bit 2 of B | 8 |
+| 0xCBD1 | SET 2,C | Set bit 2 of C | 8 |
+| 0xCBD2 | SET 2,D | Set bit 2 of D | 8 |
+| 0xCBD3 | SET 2,E | Set bit 2 of E | 8 |
+| 0xCBD4 | SET 2,H | Set bit 2 of H | 8 |
+| 0xCBD5 | SET 2,L | Set bit 2 of L | 8 |
+| 0xCBD6 | SET 2,(HL) | Set bit 2 of memory at HL | 15 |
+| 0xCBD7 | SET 2,A | Set bit 2 of A | 8 |
+| 0xCBD8 | SET 3,B | Set bit 3 of B | 8 |
+| 0xCBD9 | SET 3,C | Set bit 3 of C | 8 |
+| 0xCBDA | SET 3,D | Set bit 3 of D | 8 |
+| 0xCBDB | SET 3,E | Set bit 3 of E | 8 |
+| 0xCBDC | SET 3,H | Set bit 3 of H | 8 |
+| 0xCBDD | SET 3,L | Set bit 3 of L | 8 |
+| 0xCBDE | SET 3,(HL) | Set bit 3 of memory at HL | 15 |
+| 0xCBDF | SET 3,A | Set bit 3 of A | 8 |
+| 0xCBE0 | SET 4,B | Set bit 4 of B | 8 |
+| 0xCBE1 | SET 4,C | Set bit 4 of C | 8 |
+| 0xCBE2 | SET 4,D | Set bit 4 of D | 8 |
+| 0xCBE3 | SET 4,E | Set bit 4 of E | 8 |
+| 0xCBE4 | SET 4,H | Set bit 4 of H | 8 |
+| 0xCBE5 | SET 4,L | Set bit 4 of L | 8 |
+| 0xCBE6 | SET 4,(HL) | Set bit 4 of memory at HL | 15 |
+| 0xCBE7 | SET 4,A | Set bit 4 of A | 8 |
+| 0xCBE8 | SET 5,B | Set bit 5 of B | 8 |
+| 0xCBE9 | SET 5,C | Set bit 5 of C | 8 |
+| 0xCBEA | SET 5,D | Set bit 5 of D | 8 |
+| 0xCBEB | SET 5,E | Set bit 5 of E | 8 |
+| 0xCBEC | SET 5,H | Set bit 5 of H | 8 |
+| 0xCBED | SET 5,L | Set bit 5 of L | 8 |
+| 0xCBEE | SET 5,(HL) | Set bit 5 of memory at HL | 15 |
+| 0xCBEF | SET 5,A | Set bit 5 of A | 8 |
+| 0xCBF0 | SET 6,B | Set bit 6 of B | 8 |
+| 0xCBF1 | SET 6,C | Set bit 6 of C | 8 |
+| 0xCBF2 | SET 6,D | Set bit 6 of D | 8 |
+| 0xCBF3 | SET 6,E | Set bit 6 of E | 8 |
+| 0xCBF4 | SET 6,H | Set bit 6 of H | 8 |
+| 0xCBF5 | SET 6,L | Set bit 6 of L | 8 |
+| 0xCBF6 | SET 6,(HL) | Set bit 6 of memory at HL | 15 |
+| 0xCBF7 | SET 6,A | Set bit 6 of A | 8 |
+| 0xCBF8 | SET 7,B | Set bit 7 of B | 8 |
+| 0xCBF9 | SET 7,C | Set bit 7 of C | 8 |
+| 0xCBFA | SET 7,D | Set bit 7 of D | 8 |
+| 0xCBFB | SET 7,E | Set bit 7 of E | 8 |
+| 0xCBFC | SET 7,H | Set bit 7 of H | 8 |
+| 0xCBFD | SET 7,L | Set bit 7 of L | 8 |
 | 0xCBFE | SET 7,(HL) | Set bit 7 of memory at HL | 15 |
-| 0xCBFC | SET 7,H | Set bit 7 of H register | 8 |
+| 0xCBFF | SET 7,A | Set bit 7 of A | 8 |
 
 ## ED Prefix Instructions (Extended Z80)
 

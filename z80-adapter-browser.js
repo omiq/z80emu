@@ -384,6 +384,295 @@ class Z80Adapter {
                 this.cycles += 15;
             }, // SET 7,(HL)
             
+            // CB prefix rotate circular instructions
+            0xCB00: () => { this.b = this.rlc1(this.b); this.cycles += 8; }, // RLC B
+            0xCB01: () => { this.c = this.rlc1(this.c); this.cycles += 8; }, // RLC C
+            0xCB02: () => { this.d = this.rlc1(this.d); this.cycles += 8; }, // RLC D
+            0xCB03: () => { this.e = this.rlc1(this.e); this.cycles += 8; }, // RLC E
+            0xCB04: () => { this.h = this.rlc1(this.h); this.cycles += 8; }, // RLC H
+            0xCB05: () => { this.l = this.rlc1(this.l); this.cycles += 8; }, // RLC L
+            0xCB06: () => { const addr = this.hl; const value = this.r1(addr); this.w1(addr, this.rlc1(value)); this.cycles += 15; }, // RLC (HL)
+            0xCB07: () => { this.a = this.rlc1(this.a); this.cycles += 8; }, // RLC A
+            
+            0xCB08: () => { this.b = this.rrc1(this.b); this.cycles += 8; }, // RRC B
+            0xCB09: () => { this.c = this.rrc1(this.c); this.cycles += 8; }, // RRC C
+            0xCB0A: () => { this.d = this.rrc1(this.d); this.cycles += 8; }, // RRC D
+            0xCB0B: () => { this.e = this.rrc1(this.e); this.cycles += 8; }, // RRC E
+            0xCB0C: () => { this.h = this.rrc1(this.h); this.cycles += 8; }, // RRC H
+            0xCB0D: () => { this.l = this.rrc1(this.l); this.cycles += 8; }, // RRC L
+            0xCB0E: () => { const addr = this.hl; const value = this.r1(addr); this.w1(addr, this.rrc1(value)); this.cycles += 15; }, // RRC (HL)
+            0xCB0F: () => { this.a = this.rrc1(this.a); this.cycles += 8; }, // RRC A
+            
+            // CB prefix rotate through carry instructions
+            0xCB10: () => { this.b = this.rl1(this.b); this.cycles += 8; }, // RL B
+            0xCB11: () => { this.c = this.rl1(this.c); this.cycles += 8; }, // RL C
+            0xCB12: () => { this.d = this.rl1(this.d); this.cycles += 8; }, // RL D
+            0xCB13: () => { this.e = this.rl1(this.e); this.cycles += 8; }, // RL E
+            0xCB14: () => { this.h = this.rl1(this.h); this.cycles += 8; }, // RL H
+            0xCB15: () => { this.l = this.rl1(this.l); this.cycles += 8; }, // RL L
+            0xCB16: () => { const addr = this.hl; const value = this.r1(addr); this.w1(addr, this.rl1(value)); this.cycles += 15; }, // RL (HL)
+            0xCB17: () => { this.a = this.rl1(this.a); this.cycles += 8; }, // RL A
+            
+            0xCB18: () => { this.b = this.rr1(this.b); this.cycles += 8; }, // RR B
+            0xCB19: () => { this.c = this.rr1(this.c); this.cycles += 8; }, // RR C
+            0xCB1A: () => { this.d = this.rr1(this.d); this.cycles += 8; }, // RR D
+            0xCB1B: () => { this.e = this.rr1(this.e); this.cycles += 8; }, // RR E
+            0xCB1C: () => { this.h = this.rr1(this.h); this.cycles += 8; }, // RR H
+            0xCB1D: () => { this.l = this.rr1(this.l); this.cycles += 8; }, // RR L
+            0xCB1E: () => { const addr = this.hl; const value = this.r1(addr); this.w1(addr, this.rr1(value)); this.cycles += 15; }, // RR (HL)
+            0xCB1F: () => { this.a = this.rr1(this.a); this.cycles += 8; }, // RR A
+            
+            // CB prefix shift arithmetic instructions
+            0xCB20: () => { this.b = this.sla1(this.b); this.cycles += 8; }, // SLA B
+            0xCB21: () => { this.c = this.sla1(this.c); this.cycles += 8; }, // SLA C
+            0xCB22: () => { this.d = this.sla1(this.d); this.cycles += 8; }, // SLA D
+            0xCB23: () => { this.e = this.sla1(this.e); this.cycles += 8; }, // SLA E
+            0xCB24: () => { this.h = this.sla1(this.h); this.cycles += 8; }, // SLA H
+            0xCB25: () => { this.l = this.sla1(this.l); this.cycles += 8; }, // SLA L
+            0xCB26: () => { const addr = this.hl; const value = this.r1(addr); this.w1(addr, this.sla1(value)); this.cycles += 15; }, // SLA (HL)
+            0xCB27: () => { this.a = this.sla1(this.a); this.cycles += 8; }, // SLA A
+            
+            0xCB28: () => { this.b = this.sra1(this.b); this.cycles += 8; }, // SRA B
+            0xCB29: () => { this.c = this.sra1(this.c); this.cycles += 8; }, // SRA C
+            0xCB2A: () => { this.d = this.sra1(this.d); this.cycles += 8; }, // SRA D
+            0xCB2B: () => { this.e = this.sra1(this.e); this.cycles += 8; }, // SRA E
+            0xCB2C: () => { this.h = this.sra1(this.h); this.cycles += 8; }, // SRA H
+            0xCB2D: () => { this.l = this.sra1(this.l); this.cycles += 8; }, // SRA L
+            0xCB2E: () => { const addr = this.hl; const value = this.r1(addr); this.w1(addr, this.sra1(value)); this.cycles += 15; }, // SRA (HL)
+            0xCB2F: () => { this.a = this.sra1(this.a); this.cycles += 8; }, // SRA A
+            
+            // CB prefix shift logical instructions (including undocumented SLL)
+            0xCB30: () => { this.b = this.sll1(this.b); this.cycles += 8; }, // SLL B (Undocumented)
+            0xCB31: () => { this.c = this.sll1(this.c); this.cycles += 8; }, // SLL C (Undocumented)
+            0xCB32: () => { this.d = this.sll1(this.d); this.cycles += 8; }, // SLL D (Undocumented)
+            0xCB33: () => { this.e = this.sll1(this.e); this.cycles += 8; }, // SLL E (Undocumented)
+            0xCB34: () => { this.h = this.sll1(this.h); this.cycles += 8; }, // SLL H (Undocumented)
+            0xCB35: () => { this.l = this.sll1(this.l); this.cycles += 8; }, // SLL L (Undocumented)
+            0xCB36: () => { const addr = this.hl; const value = this.r1(addr); this.w1(addr, this.sll1(value)); this.cycles += 15; }, // SLL (HL) (Undocumented)
+            0xCB37: () => { this.a = this.sll1(this.a); this.cycles += 8; }, // SLL A (Undocumented)
+            
+            0xCB38: () => { this.b = this.srl1(this.b); this.cycles += 8; }, // SRL B
+            0xCB39: () => { this.c = this.srl1(this.c); this.cycles += 8; }, // SRL C
+            0xCB3A: () => { this.d = this.srl1(this.d); this.cycles += 8; }, // SRL D
+            0xCB3B: () => { this.e = this.srl1(this.e); this.cycles += 8; }, // SRL E
+            0xCB3C: () => { this.h = this.srl1(this.h); this.cycles += 8; }, // SRL H
+            0xCB3D: () => { this.l = this.srl1(this.l); this.cycles += 8; }, // SRL L
+            0xCB3E: () => { const addr = this.hl; const value = this.r1(addr); this.w1(addr, this.srl1(value)); this.cycles += 15; }, // SRL (HL)
+            
+            // CB prefix bit test instructions
+            0xCB40: () => { this.zf = (this.b & 0x01) === 0; this.nf = false; this.hf = true; this.cycles += 8; }, // BIT 0,B
+            0xCB41: () => { this.zf = (this.c & 0x01) === 0; this.nf = false; this.hf = true; this.cycles += 8; }, // BIT 0,C
+            0xCB42: () => { this.zf = (this.d & 0x01) === 0; this.nf = false; this.hf = true; this.cycles += 8; }, // BIT 0,D
+            0xCB43: () => { this.zf = (this.e & 0x01) === 0; this.nf = false; this.hf = true; this.cycles += 8; }, // BIT 0,E
+            0xCB44: () => { this.zf = (this.h & 0x01) === 0; this.nf = false; this.hf = true; this.cycles += 8; }, // BIT 0,H
+            0xCB45: () => { this.zf = (this.l & 0x01) === 0; this.nf = false; this.hf = true; this.cycles += 8; }, // BIT 0,L
+            0xCB47: () => { this.zf = (this.a & 0x01) === 0; this.nf = false; this.hf = true; this.cycles += 8; }, // BIT 0,A
+            
+            0xCB48: () => { this.zf = (this.b & 0x02) === 0; this.nf = false; this.hf = true; this.cycles += 8; }, // BIT 1,B
+            0xCB49: () => { this.zf = (this.c & 0x02) === 0; this.nf = false; this.hf = true; this.cycles += 8; }, // BIT 1,C
+            0xCB4A: () => { this.zf = (this.d & 0x02) === 0; this.nf = false; this.hf = true; this.cycles += 8; }, // BIT 1,D
+            0xCB4B: () => { this.zf = (this.e & 0x02) === 0; this.nf = false; this.hf = true; this.cycles += 8; }, // BIT 1,E
+            0xCB4C: () => { this.zf = (this.h & 0x02) === 0; this.nf = false; this.hf = true; this.cycles += 8; }, // BIT 1,H
+            0xCB4D: () => { this.zf = (this.l & 0x02) === 0; this.nf = false; this.hf = true; this.cycles += 8; }, // BIT 1,L
+            0xCB4E: () => { const value = this.r1(this.hl); this.zf = (value & 0x02) === 0; this.nf = false; this.hf = true; this.cycles += 12; }, // BIT 1,(HL)
+            0xCB4F: () => { this.zf = (this.a & 0x02) === 0; this.nf = false; this.hf = true; this.cycles += 8; }, // BIT 1,A
+            
+            0xCB50: () => { this.zf = (this.b & 0x04) === 0; this.nf = false; this.hf = true; this.cycles += 8; }, // BIT 2,B
+            0xCB51: () => { this.zf = (this.c & 0x04) === 0; this.nf = false; this.hf = true; this.cycles += 8; }, // BIT 2,C
+            0xCB52: () => { this.zf = (this.d & 0x04) === 0; this.nf = false; this.hf = true; this.cycles += 8; }, // BIT 2,D
+            0xCB53: () => { this.zf = (this.e & 0x04) === 0; this.nf = false; this.hf = true; this.cycles += 8; }, // BIT 2,E
+            0xCB54: () => { this.zf = (this.h & 0x04) === 0; this.nf = false; this.hf = true; this.cycles += 8; }, // BIT 2,H
+            0xCB55: () => { this.zf = (this.l & 0x04) === 0; this.nf = false; this.hf = true; this.cycles += 8; }, // BIT 2,L
+            0xCB56: () => { const value = this.r1(this.hl); this.zf = (value & 0x04) === 0; this.nf = false; this.hf = true; this.cycles += 12; }, // BIT 2,(HL)
+            0xCB57: () => { this.zf = (this.a & 0x04) === 0; this.nf = false; this.hf = true; this.cycles += 8; }, // BIT 2,A
+            
+            0xCB58: () => { this.zf = (this.b & 0x08) === 0; this.nf = false; this.hf = true; this.cycles += 8; }, // BIT 3,B
+            0xCB59: () => { this.zf = (this.c & 0x08) === 0; this.nf = false; this.hf = true; this.cycles += 8; }, // BIT 3,C
+            0xCB5A: () => { this.zf = (this.d & 0x08) === 0; this.nf = false; this.hf = true; this.cycles += 8; }, // BIT 3,D
+            0xCB5B: () => { this.zf = (this.e & 0x08) === 0; this.nf = false; this.hf = true; this.cycles += 8; }, // BIT 3,E
+            0xCB5C: () => { this.zf = (this.h & 0x08) === 0; this.nf = false; this.hf = true; this.cycles += 8; }, // BIT 3,H
+            0xCB5D: () => { this.zf = (this.l & 0x08) === 0; this.nf = false; this.hf = true; this.cycles += 8; }, // BIT 3,L
+            0xCB5E: () => { const value = this.r1(this.hl); this.zf = (value & 0x08) === 0; this.nf = false; this.hf = true; this.cycles += 12; }, // BIT 3,(HL)
+            0xCB5F: () => { this.zf = (this.a & 0x08) === 0; this.nf = false; this.hf = true; this.cycles += 8; }, // BIT 3,A
+            
+            0xCB60: () => { this.zf = (this.b & 0x10) === 0; this.nf = false; this.hf = true; this.cycles += 8; }, // BIT 4,B
+            0xCB61: () => { this.zf = (this.c & 0x10) === 0; this.nf = false; this.hf = true; this.cycles += 8; }, // BIT 4,C
+            0xCB62: () => { this.zf = (this.d & 0x10) === 0; this.nf = false; this.hf = true; this.cycles += 8; }, // BIT 4,D
+            0xCB63: () => { this.zf = (this.e & 0x10) === 0; this.nf = false; this.hf = true; this.cycles += 8; }, // BIT 4,E
+            0xCB64: () => { this.zf = (this.h & 0x10) === 0; this.nf = false; this.hf = true; this.cycles += 8; }, // BIT 4,H
+            0xCB65: () => { this.zf = (this.l & 0x10) === 0; this.nf = false; this.hf = true; this.cycles += 8; }, // BIT 4,L
+            0xCB66: () => { const value = this.r1(this.hl); this.zf = (value & 0x10) === 0; this.nf = false; this.hf = true; this.cycles += 12; }, // BIT 4,(HL)
+            0xCB67: () => { this.zf = (this.a & 0x10) === 0; this.nf = false; this.hf = true; this.cycles += 8; }, // BIT 4,A
+            
+            0xCB68: () => { this.zf = (this.b & 0x20) === 0; this.nf = false; this.hf = true; this.cycles += 8; }, // BIT 5,B
+            0xCB69: () => { this.zf = (this.c & 0x20) === 0; this.nf = false; this.hf = true; this.cycles += 8; }, // BIT 5,C
+            0xCB6A: () => { this.zf = (this.d & 0x20) === 0; this.nf = false; this.hf = true; this.cycles += 8; }, // BIT 5,D
+            0xCB6B: () => { this.zf = (this.e & 0x20) === 0; this.nf = false; this.hf = true; this.cycles += 8; }, // BIT 5,E
+            0xCB6C: () => { this.zf = (this.h & 0x20) === 0; this.nf = false; this.hf = true; this.cycles += 8; }, // BIT 5,H
+            0xCB6D: () => { this.zf = (this.l & 0x20) === 0; this.nf = false; this.hf = true; this.cycles += 8; }, // BIT 5,L
+            0xCB6E: () => { const value = this.r1(this.hl); this.zf = (value & 0x20) === 0; this.nf = false; this.hf = true; this.cycles += 12; }, // BIT 5,(HL)
+            0xCB6F: () => { this.zf = (this.a & 0x20) === 0; this.nf = false; this.hf = true; this.cycles += 8; }, // BIT 5,A
+            
+            0xCB70: () => { this.zf = (this.b & 0x40) === 0; this.nf = false; this.hf = true; this.cycles += 8; }, // BIT 6,B
+            0xCB71: () => { this.zf = (this.c & 0x40) === 0; this.nf = false; this.hf = true; this.cycles += 8; }, // BIT 6,C
+            0xCB72: () => { this.zf = (this.d & 0x40) === 0; this.nf = false; this.hf = true; this.cycles += 8; }, // BIT 6,D
+            0xCB73: () => { this.zf = (this.e & 0x40) === 0; this.nf = false; this.hf = true; this.cycles += 8; }, // BIT 6,E
+            0xCB74: () => { this.zf = (this.h & 0x40) === 0; this.nf = false; this.hf = true; this.cycles += 8; }, // BIT 6,H
+            0xCB75: () => { this.zf = (this.l & 0x40) === 0; this.nf = false; this.hf = true; this.cycles += 8; }, // BIT 6,L
+            0xCB76: () => { const value = this.r1(this.hl); this.zf = (value & 0x40) === 0; this.nf = false; this.hf = true; this.cycles += 12; }, // BIT 6,(HL)
+            0xCB77: () => { this.zf = (this.a & 0x40) === 0; this.nf = false; this.hf = true; this.cycles += 8; }, // BIT 6,A
+            
+            0xCB78: () => { this.zf = (this.b & 0x80) === 0; this.nf = false; this.hf = true; this.cycles += 8; }, // BIT 7,B
+            0xCB79: () => { this.zf = (this.c & 0x80) === 0; this.nf = false; this.hf = true; this.cycles += 8; }, // BIT 7,C
+            0xCB7A: () => { this.zf = (this.d & 0x80) === 0; this.nf = false; this.hf = true; this.cycles += 8; }, // BIT 7,D
+            0xCB7B: () => { this.zf = (this.e & 0x80) === 0; this.nf = false; this.hf = true; this.cycles += 8; }, // BIT 7,E
+            0xCB7C: () => { this.zf = (this.h & 0x80) === 0; this.nf = false; this.hf = true; this.cycles += 8; }, // BIT 7,H
+            0xCB7D: () => { this.zf = (this.l & 0x80) === 0; this.nf = false; this.hf = true; this.cycles += 8; }, // BIT 7,L
+            0xCB7F: () => { this.zf = (this.a & 0x80) === 0; this.nf = false; this.hf = true; this.cycles += 8; }, // BIT 7,A
+            
+            // CB prefix reset bit instructions
+            0xCB80: () => { this.b &= 0xFE; this.cycles += 8; }, // RES 0,B
+            0xCB81: () => { this.c &= 0xFE; this.cycles += 8; }, // RES 0,C
+            0xCB82: () => { this.d &= 0xFE; this.cycles += 8; }, // RES 0,D
+            0xCB83: () => { this.e &= 0xFE; this.cycles += 8; }, // RES 0,E
+            0xCB84: () => { this.h &= 0xFE; this.cycles += 8; }, // RES 0,H
+            0xCB85: () => { this.l &= 0xFE; this.cycles += 8; }, // RES 0,L
+            0xCB87: () => { this.a &= 0xFE; this.cycles += 8; }, // RES 0,A
+            
+            0xCB88: () => { this.b &= 0xFD; this.cycles += 8; }, // RES 1,B
+            0xCB89: () => { this.c &= 0xFD; this.cycles += 8; }, // RES 1,C
+            0xCB8A: () => { this.d &= 0xFD; this.cycles += 8; }, // RES 1,D
+            0xCB8B: () => { this.e &= 0xFD; this.cycles += 8; }, // RES 1,E
+            0xCB8C: () => { this.h &= 0xFD; this.cycles += 8; }, // RES 1,H
+            0xCB8D: () => { this.l &= 0xFD; this.cycles += 8; }, // RES 1,L
+            0xCB8E: () => { const addr = this.hl; const value = this.r1(addr) & 0xFD; this.w1(addr, value); this.cycles += 15; }, // RES 1,(HL)
+            0xCB8F: () => { this.a &= 0xFD; this.cycles += 8; }, // RES 1,A
+            
+            0xCB90: () => { this.b &= 0xFB; this.cycles += 8; }, // RES 2,B
+            0xCB91: () => { this.c &= 0xFB; this.cycles += 8; }, // RES 2,C
+            0xCB92: () => { this.d &= 0xFB; this.cycles += 8; }, // RES 2,D
+            0xCB93: () => { this.e &= 0xFB; this.cycles += 8; }, // RES 2,E
+            0xCB94: () => { this.h &= 0xFB; this.cycles += 8; }, // RES 2,H
+            0xCB95: () => { this.l &= 0xFB; this.cycles += 8; }, // RES 2,L
+            0xCB96: () => { const addr = this.hl; const value = this.r1(addr) & 0xFB; this.w1(addr, value); this.cycles += 15; }, // RES 2,(HL)
+            0xCB97: () => { this.a &= 0xFB; this.cycles += 8; }, // RES 2,A
+            
+            0xCB98: () => { this.b &= 0xF7; this.cycles += 8; }, // RES 3,B
+            0xCB99: () => { this.c &= 0xF7; this.cycles += 8; }, // RES 3,C
+            0xCB9A: () => { this.d &= 0xF7; this.cycles += 8; }, // RES 3,D
+            0xCB9B: () => { this.e &= 0xF7; this.cycles += 8; }, // RES 3,E
+            0xCB9C: () => { this.h &= 0xF7; this.cycles += 8; }, // RES 3,H
+            0xCB9D: () => { this.l &= 0xF7; this.cycles += 8; }, // RES 3,L
+            0xCB9E: () => { const addr = this.hl; const value = this.r1(addr) & 0xF7; this.w1(addr, value); this.cycles += 15; }, // RES 3,(HL)
+            0xCB9F: () => { this.a &= 0xF7; this.cycles += 8; }, // RES 3,A
+            
+            0xCBA0: () => { this.b &= 0xEF; this.cycles += 8; }, // RES 4,B
+            0xCBA1: () => { this.c &= 0xEF; this.cycles += 8; }, // RES 4,C
+            0xCBA2: () => { this.d &= 0xEF; this.cycles += 8; }, // RES 4,D
+            0xCBA3: () => { this.e &= 0xEF; this.cycles += 8; }, // RES 4,E
+            0xCBA4: () => { this.h &= 0xEF; this.cycles += 8; }, // RES 4,H
+            0xCBA5: () => { this.l &= 0xEF; this.cycles += 8; }, // RES 4,L
+            0xCBA6: () => { const addr = this.hl; const value = this.r1(addr) & 0xEF; this.w1(addr, value); this.cycles += 15; }, // RES 4,(HL)
+            0xCBA7: () => { this.a &= 0xEF; this.cycles += 8; }, // RES 4,A
+            
+            0xCBA8: () => { this.b &= 0xDF; this.cycles += 8; }, // RES 5,B
+            0xCBA9: () => { this.c &= 0xDF; this.cycles += 8; }, // RES 5,C
+            0xCBAA: () => { this.d &= 0xDF; this.cycles += 8; }, // RES 5,D
+            0xCBAB: () => { this.e &= 0xDF; this.cycles += 8; }, // RES 5,E
+            0xCBAC: () => { this.h &= 0xDF; this.cycles += 8; }, // RES 5,H
+            0xCBAD: () => { this.l &= 0xDF; this.cycles += 8; }, // RES 5,L
+            0xCBAE: () => { const addr = this.hl; const value = this.r1(addr) & 0xDF; this.w1(addr, value); this.cycles += 15; }, // RES 5,(HL)
+            0xCBAF: () => { this.a &= 0xDF; this.cycles += 8; }, // RES 5,A
+            
+            0xCBB0: () => { this.b &= 0xBF; this.cycles += 8; }, // RES 6,B
+            0xCBB1: () => { this.c &= 0xBF; this.cycles += 8; }, // RES 6,C
+            0xCBB2: () => { this.d &= 0xBF; this.cycles += 8; }, // RES 6,D
+            0xCBB3: () => { this.e &= 0xBF; this.cycles += 8; }, // RES 6,E
+            0xCBB4: () => { this.h &= 0xBF; this.cycles += 8; }, // RES 6,H
+            0xCBB5: () => { this.l &= 0xBF; this.cycles += 8; }, // RES 6,L
+            0xCBB6: () => { const addr = this.hl; const value = this.r1(addr) & 0xBF; this.w1(addr, value); this.cycles += 15; }, // RES 6,(HL)
+            0xCBB7: () => { this.a &= 0xBF; this.cycles += 8; }, // RES 6,A
+            
+            0xCBB8: () => { this.b &= 0x7F; this.cycles += 8; }, // RES 7,B
+            0xCBB9: () => { this.c &= 0x7F; this.cycles += 8; }, // RES 7,C
+            0xCBBA: () => { this.d &= 0x7F; this.cycles += 8; }, // RES 7,D
+            0xCBBB: () => { this.e &= 0x7F; this.cycles += 8; }, // RES 7,E
+            0xCBBC: () => { this.h &= 0x7F; this.cycles += 8; }, // RES 7,H
+            0xCBBD: () => { this.l &= 0x7F; this.cycles += 8; }, // RES 7,L
+            0xCBBE: () => { const addr = this.hl; const value = this.r1(addr) & 0x7F; this.w1(addr, value); this.cycles += 15; }, // RES 7,(HL)
+            0xCBBF: () => { this.a &= 0x7F; this.cycles += 8; }, // RES 7,A
+            
+            // CB prefix set bit instructions
+            0xCBC0: () => { this.b |= 0x01; this.cycles += 8; }, // SET 0,B
+            0xCBC1: () => { this.c |= 0x01; this.cycles += 8; }, // SET 0,C
+            0xCBC2: () => { this.d |= 0x01; this.cycles += 8; }, // SET 0,D
+            0xCBC3: () => { this.e |= 0x01; this.cycles += 8; }, // SET 0,E
+            0xCBC4: () => { this.h |= 0x01; this.cycles += 8; }, // SET 0,H
+            0xCBC5: () => { this.l |= 0x01; this.cycles += 8; }, // SET 0,L
+            0xCBC6: () => { const addr = this.hl; const value = this.r1(addr) | 0x01; this.w1(addr, value); this.cycles += 15; }, // SET 0,(HL)
+            0xCBC7: () => { this.a |= 0x01; this.cycles += 8; }, // SET 0,A
+            
+            0xCBC8: () => { this.b |= 0x02; this.cycles += 8; }, // SET 1,B
+            0xCBC9: () => { this.c |= 0x02; this.cycles += 8; }, // SET 1,C
+            0xCBCA: () => { this.d |= 0x02; this.cycles += 8; }, // SET 1,D
+            0xCBCB: () => { this.e |= 0x02; this.cycles += 8; }, // SET 1,E
+            0xCBCC: () => { this.h |= 0x02; this.cycles += 8; }, // SET 1,H
+            0xCBCD: () => { this.l |= 0x02; this.cycles += 8; }, // SET 1,L
+            0xCBCE: () => { const addr = this.hl; const value = this.r1(addr) | 0x02; this.w1(addr, value); this.cycles += 15; }, // SET 1,(HL)
+            0xCBCF: () => { this.a |= 0x02; this.cycles += 8; }, // SET 1,A
+            
+            0xCBD0: () => { this.b |= 0x04; this.cycles += 8; }, // SET 2,B
+            0xCBD1: () => { this.c |= 0x04; this.cycles += 8; }, // SET 2,C
+            0xCBD2: () => { this.d |= 0x04; this.cycles += 8; }, // SET 2,D
+            0xCBD3: () => { this.e |= 0x04; this.cycles += 8; }, // SET 2,E
+            0xCBD4: () => { this.h |= 0x04; this.cycles += 8; }, // SET 2,H
+            0xCBD5: () => { this.l |= 0x04; this.cycles += 8; }, // SET 2,L
+            0xCBD6: () => { const addr = this.hl; const value = this.r1(addr) | 0x04; this.w1(addr, value); this.cycles += 15; }, // SET 2,(HL)
+            0xCBD7: () => { this.a |= 0x04; this.cycles += 8; }, // SET 2,A
+            
+            0xCBD8: () => { this.b |= 0x08; this.cycles += 8; }, // SET 3,B
+            0xCBD9: () => { this.c |= 0x08; this.cycles += 8; }, // SET 3,C
+            0xCBDA: () => { this.d |= 0x08; this.cycles += 8; }, // SET 3,D
+            0xCBDB: () => { this.e |= 0x08; this.cycles += 8; }, // SET 3,E
+            0xCBDC: () => { this.h |= 0x08; this.cycles += 8; }, // SET 3,H
+            0xCBDD: () => { this.l |= 0x08; this.cycles += 8; }, // SET 3,L
+            0xCBDE: () => { const addr = this.hl; const value = this.r1(addr) | 0x08; this.w1(addr, value); this.cycles += 15; }, // SET 3,(HL)
+            0xCBDF: () => { this.a |= 0x08; this.cycles += 8; }, // SET 3,A
+            
+            0xCBE0: () => { this.b |= 0x10; this.cycles += 8; }, // SET 4,B
+            0xCBE1: () => { this.c |= 0x10; this.cycles += 8; }, // SET 4,C
+            0xCBE2: () => { this.d |= 0x10; this.cycles += 8; }, // SET 4,D
+            0xCBE3: () => { this.e |= 0x10; this.cycles += 8; }, // SET 4,E
+            0xCBE4: () => { this.h |= 0x10; this.cycles += 8; }, // SET 4,H
+            0xCBE5: () => { this.l |= 0x10; this.cycles += 8; }, // SET 4,L
+            0xCBE6: () => { const addr = this.hl; const value = this.r1(addr) | 0x10; this.w1(addr, value); this.cycles += 15; }, // SET 4,(HL)
+            0xCBE7: () => { this.a |= 0x10; this.cycles += 8; }, // SET 4,A
+            
+            0xCBE8: () => { this.b |= 0x20; this.cycles += 8; }, // SET 5,B
+            0xCBE9: () => { this.c |= 0x20; this.cycles += 8; }, // SET 5,C
+            0xCBEA: () => { this.d |= 0x20; this.cycles += 8; }, // SET 5,D
+            0xCBEB: () => { this.e |= 0x20; this.cycles += 8; }, // SET 5,E
+            0xCBEC: () => { this.h |= 0x20; this.cycles += 8; }, // SET 5,H
+            0xCBED: () => { this.l |= 0x20; this.cycles += 8; }, // SET 5,L
+            0xCBEE: () => { const addr = this.hl; const value = this.r1(addr) | 0x20; this.w1(addr, value); this.cycles += 15; }, // SET 5,(HL)
+            0xCBEF: () => { this.a |= 0x20; this.cycles += 8; }, // SET 5,A
+            
+            0xCBF0: () => { this.b |= 0x40; this.cycles += 8; }, // SET 6,B
+            0xCBF1: () => { this.c |= 0x40; this.cycles += 8; }, // SET 6,C
+            0xCBF2: () => { this.d |= 0x40; this.cycles += 8; }, // SET 6,D
+            0xCBF3: () => { this.e |= 0x40; this.cycles += 8; }, // SET 6,E
+            0xCBF4: () => { this.h |= 0x40; this.cycles += 8; }, // SET 6,H
+            0xCBF5: () => { this.l |= 0x40; this.cycles += 8; }, // SET 6,L
+            0xCBF6: () => { const addr = this.hl; const value = this.r1(addr) | 0x40; this.w1(addr, value); this.cycles += 15; }, // SET 6,(HL)
+            0xCBF7: () => { this.a |= 0x40; this.cycles += 8; }, // SET 6,A
+            
+            0xCBF8: () => { this.b |= 0x80; this.cycles += 8; }, // SET 7,B
+            0xCBF9: () => { this.c |= 0x80; this.cycles += 8; }, // SET 7,C
+            0xCBFA: () => { this.d |= 0x80; this.cycles += 8; }, // SET 7,D
+            0xCBFB: () => { this.e |= 0x80; this.cycles += 8; }, // SET 7,E
+            0xCBFD: () => { this.l |= 0x80; this.cycles += 8; }, // SET 7,L
+            0xCBFF: () => { this.a |= 0x80; this.cycles += 8; }, // SET 7,A
+            
             0xDD36: () => { // LD (IX+d),n
                 const offset = this.next1s();
                 const addr = (this.ix + offset) & 0xFFFF;
@@ -1172,6 +1461,72 @@ class Z80Adapter {
     sll1(v) { // SLL r - Shift Left Logical (undocumented Z80 instruction)
         const result = ((v << 1) | 0x01) & 0xFF; // Shift left and set bit 0 to 1
         this.cf = (v & 0x80) !== 0; // Carry flag gets the bit that was shifted out
+        this.zf = (result === 0);
+        this.sf = (result & 0x80) !== 0;
+        this.hf = false;
+        this.pf = this.calcParity(result);
+        this.nf = false;
+        return result;
+    }
+
+    rlc1(v) { // RLC r - Rotate Left Circular
+        const result = ((v << 1) | (v >> 7)) & 0xFF;
+        this.cf = (v & 0x80) !== 0;
+        this.zf = (result === 0);
+        this.sf = (result & 0x80) !== 0;
+        this.hf = false;
+        this.pf = this.calcParity(result);
+        this.nf = false;
+        return result;
+    }
+
+    rrc1(v) { // RRC r - Rotate Right Circular
+        const result = ((v >> 1) | ((v & 0x01) << 7)) & 0xFF;
+        this.cf = (v & 0x01) !== 0;
+        this.zf = (result === 0);
+        this.sf = (result & 0x80) !== 0;
+        this.hf = false;
+        this.pf = this.calcParity(result);
+        this.nf = false;
+        return result;
+    }
+
+    rl1(v) { // RL r - Rotate Left through Carry
+        const result = ((v << 1) | (this.cf ? 1 : 0)) & 0xFF;
+        this.cf = (v & 0x80) !== 0;
+        this.zf = (result === 0);
+        this.sf = (result & 0x80) !== 0;
+        this.hf = false;
+        this.pf = this.calcParity(result);
+        this.nf = false;
+        return result;
+    }
+
+    rr1(v) { // RR r - Rotate Right through Carry
+        const result = ((v >> 1) | ((this.cf ? 1 : 0) << 7)) & 0xFF;
+        this.cf = (v & 0x01) !== 0;
+        this.zf = (result === 0);
+        this.sf = (result & 0x80) !== 0;
+        this.hf = false;
+        this.pf = this.calcParity(result);
+        this.nf = false;
+        return result;
+    }
+
+    sla1(v) { // SLA r - Shift Left Arithmetic
+        const result = (v << 1) & 0xFF;
+        this.cf = (v & 0x80) !== 0;
+        this.zf = (result === 0);
+        this.sf = (result & 0x80) !== 0;
+        this.hf = false;
+        this.pf = this.calcParity(result);
+        this.nf = false;
+        return result;
+    }
+
+    sra1(v) { // SRA r - Shift Right Arithmetic
+        const result = ((v >> 1) | (v & 0x80)) & 0xFF; // Preserve sign bit
+        this.cf = (v & 0x01) !== 0;
         this.zf = (result === 0);
         this.sf = (result & 0x80) !== 0;
         this.hf = false;
