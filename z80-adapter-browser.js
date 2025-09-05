@@ -71,7 +71,6 @@ class Z80Adapter {
             0x4B: () => { this.c = this.e; this.cycles += 4; }, // LD C,E
             0x4C: () => { this.c = this.h; this.cycles += 4; }, // LD C,H
             0x4D: () => { this.c = this.l; this.cycles += 4; }, // LD C,L
-            0x4F: () => { this.c = this.a; this.cycles += 4; }, // LD C,A
             
             // LD A,<reg> instructions - CRITICAL FOR CP/M BOOT!
             0x78: () => { this.a = this.b; this.cycles += 4; }, // LD A,B
@@ -80,6 +79,14 @@ class Z80Adapter {
             0x7B: () => { this.a = this.e; this.cycles += 4; }, // LD A,E
             0x7C: () => { this.a = this.h; this.cycles += 4; }, // LD A,H
             0x7D: () => { this.a = this.l; this.cycles += 4; }, // LD A,L
+            
+            // LD <reg>,A instructions - CRITICAL FOR CP/M BOOT!
+            0x47: () => { this.b = this.a; this.cycles += 4; }, // LD B,A
+            0x4F: () => { this.c = this.a; this.cycles += 4; }, // LD C,A
+            0x57: () => { this.d = this.a; this.cycles += 4; }, // LD D,A
+            0x5F: () => { this.e = this.a; this.cycles += 4; }, // LD E,A
+            0x67: () => { this.h = this.a; this.cycles += 4; }, // LD H,A
+            0x6F: () => { this.l = this.a; this.cycles += 4; }, // LD L,A
             
             // Memory operations
             0x02: () => { this.w1(this.bc, this.a); this.cycles += 7; }, // LD (BC),A
@@ -94,13 +101,17 @@ class Z80Adapter {
             0x83: () => { this.a = this.add1(this.a, this.e); this.cycles += 4; }, // ADD A,E
             0x84: () => { this.a = this.add1(this.a, this.h); this.cycles += 4; }, // ADD A,H
             0x85: () => { this.a = this.add1(this.a, this.l); this.cycles += 4; }, // ADD A,L
+            0x86: () => { this.a = this.add1(this.a, this.r1(this.hl)); this.cycles += 7; }, // ADD A,(HL)
             0x87: () => { this.a = this.add1(this.a, this.a); this.cycles += 4; }, // ADD A,A
+            0xC6: () => { this.a = this.add1(this.a, this.next1()); this.cycles += 7; }, // ADD A,n
             
             // Increment/Decrement
             0x03: () => { this.bc = (this.bc + 1) & 0xFFFF; this.cycles += 6; }, // INC BC
             0x13: () => { this.de = (this.de + 1) & 0xFFFF; this.cycles += 6; }, // INC DE
             0x23: () => { this.hl = (this.hl + 1) & 0xFFFF; this.cycles += 6; }, // INC HL
             0x33: () => { this.sp = (this.sp + 1) & 0xFFFF; this.cycles += 6; }, // INC SP
+            0x34: () => { const addr = this.hl; const value = this.r1(addr); this.w1(addr, this.inc1(value)); this.cycles += 10; }, // INC (HL)
+            0x35: () => { const addr = this.hl; const value = this.r1(addr); this.w1(addr, this.dec1(value)); this.cycles += 10; }, // DEC (HL)
             
             // 16-bit arithmetic operations - CRITICAL FOR CP/M BOOT!
             0x09: () => { this.hl = this.add2(this.hl, this.bc); this.cycles += 11; }, // ADD HL,BC
@@ -109,13 +120,19 @@ class Z80Adapter {
             0x39: () => { this.hl = this.add2(this.hl, this.sp); this.cycles += 11; }, // ADD HL,SP
             
                 // Conditional jump instructions - CRITICAL FOR CP/M BOOT!
-    0xC2: () => { const addr = this.next2(); if (!this.zf) this.pc = addr; this.cycles += 10; }, // JP NZ,nn
-    0xCA: () => { const addr = this.next2(); if (this.zf) this.pc = addr; this.cycles += 10; }, // JP Z,nn
-    0xD2: () => { const addr = this.next2(); if (!this.cf) this.pc = addr; this.cycles += 10; }, // JP NC,nn
-    0xDA: () => { const addr = this.next2(); if (this.cf) this.pc = addr; this.cycles += 10; }, // JP C,nn
+            0xC2: () => { const addr = this.next2(); if (!this.zf) this.pc = addr; this.cycles += 10; }, // JP NZ,nn
+            0xCA: () => { const addr = this.next2(); if (this.zf) this.pc = addr; this.cycles += 10; }, // JP Z,nn
+            0xD2: () => { const addr = this.next2(); if (!this.cf) this.pc = addr; this.cycles += 10; }, // JP NC,nn
+            0xDA: () => { const addr = this.next2(); if (this.cf) this.pc = addr; this.cycles += 10; }, // JP C,nn
 
-    // Rotate instructions - CRITICAL FOR CP/M BOOT!
-    0x1F: () => { const old_cf = this.cf; this.cf = (this.a & 0x01) !== 0; this.a = ((this.a >> 1) | (old_cf ? 0x80 : 0)) & 0xFF; this.cycles += 4; }, // RRA
+                // Exchange instructions - CRITICAL FOR CP/M BOOT!
+            0xEB: () => { const temp = this.de; this.de = this.hl; this.hl = temp; this.cycles += 4; }, // EX DE,HL
+            
+            // Stack pointer instructions - CRITICAL FOR CP/M BOOT!
+            0xF9: () => { this.sp = this.hl; this.cycles += 6; }, // LD SP,HL
+            
+            // Rotate instructions - CRITICAL FOR CP/M BOOT!
+            0x1F: () => { const old_cf = this.cf; this.cf = (this.a & 0x01) !== 0; this.a = ((this.a >> 1) | (old_cf ? 0x80 : 0)) & 0xFF; this.cycles += 4; }, // RRA
             
             0x0B: () => { this.bc = (this.bc - 1) & 0xFFFF; this.cycles += 6; }, // DEC BC
             0x1B: () => { this.de = (this.de - 1) & 0xFFFF; this.cycles += 6; }, // DEC DE
@@ -126,6 +143,7 @@ class Z80Adapter {
             0xC3: () => { this.pc = this.next2(); this.cycles += 10; }, // JP nn
             0xC4: () => { if (!this.zf) { this.push(this.pc + 2); this.pc = this.next2(); this.cycles += 17; } else { this.pc += 2; this.cycles += 10; } }, // CALL NZ,nn
             0xCC: () => { if (this.zf) { this.push(this.pc + 2); this.pc = this.next2(); this.cycles += 17; } else { this.pc += 2; this.cycles += 10; } }, // CALL Z,nn
+            0xD4: () => { if (!this.cf) { this.push(this.pc + 2); this.pc = this.next2(); this.cycles += 17; } else { this.pc += 2; this.cycles += 10; } }, // CALL NC,nn
             
             // Returns
             0xC9: () => { this.pc = this.pop(); this.cycles += 10; }, // RET
@@ -165,7 +183,20 @@ class Z80Adapter {
             0x93: () => { this.a = this.sub1(this.a, this.e); this.cycles += 4; }, // SUB E
             0x94: () => { this.a = this.sub1(this.a, this.h); this.cycles += 4; }, // SUB H
             0x95: () => { this.a = this.sub1(this.a, this.l); this.cycles += 4; }, // SUB L
+            0x96: () => { this.a = this.sub1(this.a, this.r1(this.hl)); this.cycles += 7; }, // SUB (HL)
             0x97: () => { this.a = this.sub1(this.a, this.a); this.cycles += 4; }, // SUB A
+            0xD6: () => { this.a = this.sub1(this.a, this.next1()); this.cycles += 7; }, // SUB A,n
+            
+            // SBC (Subtract with Carry) instructions - CRITICAL FOR CP/M BOOT!
+            0x98: () => { this.a = this.sbc1(this.a, this.b); this.cycles += 4; }, // SBC A,B
+            0x99: () => { this.a = this.sbc1(this.a, this.c); this.cycles += 4; }, // SBC A,C
+            0x9A: () => { this.a = this.sbc1(this.a, this.d); this.cycles += 4; }, // SBC A,D
+            0x9B: () => { this.a = this.sbc1(this.a, this.e); this.cycles += 4; }, // SBC A,E
+            0x9C: () => { this.a = this.sbc1(this.a, this.h); this.cycles += 4; }, // SBC A,H
+            0x9D: () => { this.a = this.sbc1(this.a, this.l); this.cycles += 4; }, // SBC A,L
+            0x9E: () => { this.a = this.sbc1(this.a, this.r1(this.hl)); this.cycles += 7; }, // SBC A,(HL)
+            0x9F: () => { this.a = this.sbc1(this.a, this.a); this.cycles += 4; }, // SBC A,A
+            0xDE: () => { this.a = this.sbc1(this.a, this.next1()); this.cycles += 7; }, // SBC A,n
             
             // Critical increment/decrement for CP/M
             0x3C: () => { this.a = this.inc1(this.a); this.cycles += 4; }, // INC A
@@ -207,6 +238,7 @@ class Z80Adapter {
             0xA5: () => { this.a = this.a & this.l; this.cycles += 4; }, // AND L
             0xA6: () => { this.a = this.a & this.r1(this.hl); this.cycles += 7; }, // AND (HL)
             0xE6: () => { this.a = this.a & this.next1(); this.cycles += 7; }, // AND n
+            0x2F: () => { this.a ^= 0xFF; this.cycles += 4; }, // CPL (Complement A)
             
             
             // Compare operations
@@ -226,6 +258,7 @@ class Z80Adapter {
             // Rotate and shift operations
             0x07: () => { this.a = ((this.a << 1) | (this.a >> 7)) & 0xFF; this.cf = (this.a & 0x01) !== 0; this.cycles += 4; }, // RLCA
             0x0F: () => { this.a = ((this.a >> 1) | (this.a << 7)) & 0xFF; this.cf = (this.a & 0x80) !== 0; this.cycles += 4; }, // RRCA
+            0x17: () => { const old_cf = this.cf; this.cf = (this.a & 0x80) !== 0; this.a = ((this.a << 1) | (old_cf ? 0x01 : 0)) & 0xFF; this.cycles += 4; }, // RLA
             0x1F: () => { const old_cf = this.cf; this.cf = (this.a & 0x01) !== 0; this.a = ((this.a >> 1) | (old_cf ? 0x80 : 0)) & 0xFF; this.cycles += 4; }, // RRA
             
             // I/O operations essential for CP/M boot (uses ports 0x0a-0x10)
@@ -245,6 +278,14 @@ class Z80Adapter {
             0xB6: () => { this.a = this.or1(this.a, this.r1(this.hl)); this.cycles += 7; }, // OR (HL)
             0xB7: () => { this.a = this.or1(this.a, this.a); this.cycles += 4; }, // OR A (test A)
             0xF6: () => { this.a = this.or1(this.a, this.next1()); this.cycles += 7; }, // OR n
+            
+            // Missing LD (HL),<reg> instructions - CRITICAL FOR CP/M BOOT!
+            0x70: () => { this.w1(this.hl, this.b); this.cycles += 7; }, // LD (HL),B
+            0x71: () => { this.w1(this.hl, this.c); this.cycles += 7; }, // LD (HL),C
+            0x72: () => { this.w1(this.hl, this.d); this.cycles += 7; }, // LD (HL),D
+            0x73: () => { this.w1(this.hl, this.e); this.cycles += 7; }, // LD (HL),E
+            0x74: () => { this.w1(this.hl, this.h); this.cycles += 7; }, // LD (HL),H
+            0x75: () => { this.w1(this.hl, this.l); this.cycles += 7; }, // LD (HL),L
         };
     }
 
@@ -432,6 +473,18 @@ class Z80Adapter {
         this.sf = (result & 0x80) !== 0;
         this.hf = (a & 0x0F) < (b & 0x0F);
         this.cf = a < b;
+        this.pf = this.calcParity(result);
+        this.nf = true;
+        return result;
+    }
+
+    sbc1(a, b) {
+        const carry = this.cf ? 1 : 0;
+        const result = (a - b - carry) & 0xFF;
+        this.zf = (result === 0);
+        this.sf = (result & 0x80) !== 0;
+        this.hf = (a & 0x0F) < ((b & 0x0F) + carry);
+        this.cf = a < (b + carry);
         this.pf = this.calcParity(result);
         this.nf = true;
         return result;

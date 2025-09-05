@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>CP/M Boot Complete Test</title>
+    <style>
+        body { font-family: monospace; margin: 20px; }
+        #output { background: #000; color: #0f0; padding: 10px; height: 400px; overflow-y: auto; }
+        .status { margin: 10px 0; padding: 10px; border-radius: 5px; }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+    </style>
+</head>
+<body>
+    <h1>CP/M Boot Complete Test</h1>
+    <p>Testing if CP/M boots completely to A> prompt with all Z80 instruction fixes</p>
+    
+    <div id="status" class="status info">Initializing...</div>
+    <div id="output"></div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/idb@8/build/umd.js"></script>
+    <script src="memio.js?v=2025.01.28.200"></script>
+    <script src="z80.js?v=2025.01.28.201"></script>
+    <script src="z80-adapter-browser.js?v=2025.01.28.1007"></script>
+    <script src="vt100.js?v=2025.01.28.203"></script>
+    <script src="emulator.js?v=2025.01.28.211"></script>
+    
+    <script>
+        let emulator = null;
+        let bootComplete = false;
+        let testTimeout = null;
+        let stepCount = 0;
+        const maxSteps = 10000; // Prevent infinite loops
+        
+        function log(message) {
+            const output = document.getElementById('output');
+            const timestamp = new Date().toLocaleTimeString();
+            output.innerHTML += `[${timestamp}] ${message}\n`;
+            output.scrollTop = output.scrollHeight;
+            console.log(message);
+        }
+        
+        function updateStatus(message, type = 'info') {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.className = `status ${type}`;
+        }
+        
+        async function testCPMBoot() {
+            try {
+                updateStatus('Creating emulator...', 'info');
+                log('Creating emulator instance...');
+                
+                emulator = new Emulator();
+                
+                // Override the vt100 method to capture output
+                const originalVt100 = emulator.vt100;
+                emulator.vt100 = function(text) {
+                    log(`VT100: ${text.replace(/\r\n/g, '\\r\\n')}`);
+                    originalVt100.call(this, text);
+                    
+                    // Check if we've reached the A> prompt
+                    if (text.includes('A>') && !bootComplete) {
+                        bootComplete = true;
+                        updateStatus('SUCCESS: CP/M booted to A> prompt!', 'success');
+                        log('🎉 CP/M successfully booted to A> prompt!');
+                        clearTimeout(testTimeout);
+                        return;
+                    }
+                };
+                
+                // Override the step method to track progress
+                const originalStep = emulator.cpu.step;
+                emulator.cpu.step = function() {
+                    stepCount++;
+                    if (stepCount > maxSteps) {
+                        updateStatus('ERROR: Maximum steps exceeded - possible infinite loop', 'error');
+                        log(`❌ Maximum steps (${maxSteps}) exceeded - stopping test`);
+                        clearTimeout(testTimeout);
+                        return;
+                    }
+                    
+                    if (stepCount % 1000 === 0) {
+                        log(`Step ${stepCount}: PC=0x${this.pc.toString(16).padStart(4, '0')}, A=0x${this.a.toString(16).padStart(2, '0')}`);
+                    }
+                    
+                    return originalStep.call(this);
+                };
+                
+                updateStatus('Starting CP/M boot...', 'info');
+                log('Starting CP/M boot sequence...');
+                
+                // Set a timeout to prevent hanging
+                testTimeout = setTimeout(() => {
+                    if (!bootComplete) {
+                        updateStatus('TIMEOUT: CP/M boot did not complete within 30 seconds', 'error');
+                        log('❌ CP/M boot timed out after 30 seconds');
+                        log(`Final state: PC=0x${emulator.cpu.pc.toString(16).padStart(4, '0')}, A=0x${emulator.cpu.a.toString(16).padStart(2, '0')}`);
+                    }
+                }, 30000);
+                
+                // Start the emulator
+                emulator.gotoState('running');
+                
+            } catch (error) {
+                updateStatus(`ERROR: ${error.message}`, 'error');
+                log(`❌ Error during CP/M boot test: ${error.message}`);
+                console.error('CP/M boot test error:', error);
+            }
+        }
+        
+        // Start the test when page loads
+        window.addEventListener('load', () => {
+            log('CP/M Boot Complete Test initialized');
+            setTimeout(testCPMBoot, 1000);
+        });
+    </script>
+</body>
+</html>
