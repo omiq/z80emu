@@ -220,11 +220,20 @@ class Z80Adapter {
             0xC4: () => { if (!this.zf) { this.push(this.pc + 2); this.pc = this.next2(); this.cycles += 17; } else { this.pc += 2; this.cycles += 10; } }, // CALL NZ,nn
             0xCC: () => { if (this.zf) { this.push(this.pc + 2); this.pc = this.next2(); this.cycles += 17; } else { this.pc += 2; this.cycles += 10; } }, // CALL Z,nn
             0xD4: () => { if (!this.cf) { this.push(this.pc + 2); this.pc = this.next2(); this.cycles += 17; } else { this.pc += 2; this.cycles += 10; } }, // CALL NC,nn
+            0xDC: () => { if (this.cf) { this.push(this.pc + 2); this.pc = this.next2(); this.cycles += 17; } else { this.pc += 2; this.cycles += 10; } }, // CALL C,nn
+            0xEC: () => { if (this.pf) { this.push(this.pc + 2); this.pc = this.next2(); this.cycles += 17; } else { this.pc += 2; this.cycles += 10; } }, // CALL PE,nn
+            0xE4: () => { if (!this.pf) { this.push(this.pc + 2); this.pc = this.next2(); this.cycles += 17; } else { this.pc += 2; this.cycles += 10; } }, // CALL PO,nn
+            0xF4: () => { if (!this.sf) { this.push(this.pc + 2); this.pc = this.next2(); this.cycles += 17; } else { this.pc += 2; this.cycles += 10; } }, // CALL P,nn
+            0xFC: () => { if (this.sf) { this.push(this.pc + 2); this.pc = this.next2(); this.cycles += 17; } else { this.pc += 2; this.cycles += 10; } }, // CALL M,nn
             
             // Returns
             0xC9: () => { this.pc = this.pop(); this.cycles += 10; }, // RET
             0xC0: () => { if (!this.zf) { this.pc = this.pop(); this.cycles += 11; } else { this.cycles += 5; } }, // RET NZ
             0xC8: () => { if (this.zf) { this.pc = this.pop(); this.cycles += 11; } else { this.cycles += 5; } }, // RET Z
+            0xE8: () => { if (this.pf) { this.pc = this.pop(); this.cycles += 11; } else { this.cycles += 5; } }, // RET PE
+            0xE0: () => { if (!this.pf) { this.pc = this.pop(); this.cycles += 11; } else { this.cycles += 5; } }, // RET PO
+            0xF0: () => { if (!this.sf) { this.pc = this.pop(); this.cycles += 11; } else { this.cycles += 5; } }, // RET P
+            0xF8: () => { if (this.sf) { this.pc = this.pop(); this.cycles += 11; } else { this.cycles += 5; } }, // RET M
             
             // Stack operations
             0xC5: () => { this.push(this.bc); this.cycles += 11; }, // PUSH BC
@@ -400,6 +409,7 @@ class Z80Adapter {
             0xA4: () => { this.a = this.a & this.h; this.cycles += 4; }, // AND H
             0xA5: () => { this.a = this.a & this.l; this.cycles += 4; }, // AND L
             0xA6: () => { this.a = this.a & this.r1(this.hl); this.cycles += 7; }, // AND (HL)
+            0xA7: () => { this.a = this.a & this.a; this.cycles += 4; }, // AND A
             0xE6: () => { this.a = this.a & this.next1(); this.cycles += 7; }, // AND n
             0x2F: () => { this.a ^= 0xFF; this.cycles += 4; }, // CPL (Complement A)
             
@@ -412,6 +422,7 @@ class Z80Adapter {
             0xBC: () => { this.sub1(this.a, this.h); this.cycles += 4; }, // CP H
             0xBD: () => { this.sub1(this.a, this.l); this.cycles += 4; }, // CP L
             0xBE: () => { this.sub1(this.a, this.r1(this.hl)); this.cycles += 7; }, // CP (HL)
+            0xBF: () => { this.sub1(this.a, this.a); this.cycles += 4; }, // CP A
             0xFE: () => { this.sub1(this.a, this.next1()); this.cycles += 7; }, // CP n
             
             // More jumps and calls
@@ -603,6 +614,10 @@ class Z80Adapter {
                 this.iy = (this.iy + 1) & 0xFFFF;
                 this.cycles += 10;
             }, // INC IY
+            0xFDE9: () => { // JP (IY)
+                this.pc = this.iy;
+                this.cycles += 8;
+            }, // JP (IY)
             
             // DD prefix instructions (IX register instructions)
             0xDDE5: () => { // PUSH IX
@@ -655,6 +670,10 @@ class Z80Adapter {
                 this.sp = this.ix;
                 this.cycles += 10;
             }, // LD SP,IX
+            0xDDE9: () => { // JP (IX)
+                this.pc = this.ix;
+                this.cycles += 8;
+            }, // JP (IX)
         };
     }
 
