@@ -121,8 +121,6 @@ class Z80Adapter {
             
             // Jumps
             0xC3: () => { this.pc = this.next2(); this.cycles += 10; }, // JP nn
-            0xC2: () => { if (!this.zf) { this.pc = this.next2(); this.cycles += 10; } else { this.pc += 2; this.cycles += 10; } }, // JP NZ,nn
-            0xCA: () => { if (this.zf) { this.pc = this.next2(); this.cycles += 10; } else { this.pc += 2; this.cycles += 10; } }, // JP Z,nn
             0xC4: () => { if (!this.zf) { this.push(this.pc + 2); this.pc = this.next2(); this.cycles += 17; } else { this.pc += 2; this.cycles += 10; } }, // CALL NZ,nn
             0xCC: () => { if (this.zf) { this.push(this.pc + 2); this.pc = this.next2(); this.cycles += 17; } else { this.pc += 2; this.cycles += 10; } }, // CALL Z,nn
             
@@ -207,14 +205,6 @@ class Z80Adapter {
             0xA6: () => { this.a = this.a & this.r1(this.hl); this.cycles += 7; }, // AND (HL)
             0xE6: () => { this.a = this.a & this.next1(); this.cycles += 7; }, // AND n
             
-            0xB0: () => { this.a = this.a | this.b; this.cycles += 4; }, // OR B
-            0xB1: () => { this.a = this.a | this.c; this.cycles += 4; }, // OR C
-            0xB2: () => { this.a = this.a | this.d; this.cycles += 4; }, // OR D
-            0xB3: () => { this.a = this.a | this.e; this.cycles += 4; }, // OR E
-            0xB4: () => { this.a = this.a | this.h; this.cycles += 4; }, // OR H
-            0xB5: () => { this.a = this.a | this.l; this.cycles += 4; }, // OR L
-            0xB6: () => { this.a = this.a | this.r1(this.hl); this.cycles += 7; }, // OR (HL)
-            0xF6: () => { this.a = this.a | this.next1(); this.cycles += 7; }, // OR n
             
             // Compare operations
             0xB8: () => { this.sub1(this.a, this.b); this.cycles += 4; }, // CP B
@@ -227,8 +217,6 @@ class Z80Adapter {
             0xFE: () => { this.sub1(this.a, this.next1()); this.cycles += 7; }, // CP n
             
             // More jumps and calls
-            0xC0: () => { if (!this.zf) { this.pc = this.pop(); this.cycles += 11; } else { this.cycles += 5; } }, // RET NZ
-            0xC8: () => { if (this.zf) { this.pc = this.pop(); this.cycles += 11; } else { this.cycles += 5; } }, // RET Z
             0xD0: () => { if (!this.cf) { this.pc = this.pop(); this.cycles += 11; } else { this.cycles += 5; } }, // RET NC
             0xD8: () => { if (this.cf) { this.pc = this.pop(); this.cycles += 11; } else { this.cycles += 5; } }, // RET C
             
