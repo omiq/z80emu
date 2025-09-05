@@ -4,20 +4,28 @@ In the directory /Users/chrisg/github/cpm-emulator there is a working javascript
 
 ## Current Status ✅
 
-**CONFIRMED WORKING STATE**: The emulator is now confirmed working at commit `64383a8` where CP/M 2.2 boots correctly:
+**ACTIVE DEVELOPMENT**: Currently implementing missing Z80 instructions for CP/M compatibility on branch `feature/z80-library-integration` (commit `7d8ee39`):
+
+**Recently Implemented Instructions**:
+- ✅ 0xFD56 (LD D,(IY+d)) - Load D from IY+displacement
+- ✅ 0xFD75 (LD (IY+d),L) - Store L to IY+displacement  
+- ✅ 0xFD74 (LD (IY+d),H) - Store H to IY+displacement
+- ✅ 0xFD77 (LD (IY+d),A) - Store A to IY+displacement
+- ✅ 0xFD19 (ADD IY,DE) - Add DE to IY register
+- ✅ 0xDD34 (INC (IX+d)) - Increment memory at IX+displacement
+- ✅ 0xCBF4 (SET 7,H) - Set bit 7 of H register
+
+**Current Issue**: 0xCBF4 instruction still showing as unimplemented despite implementation
+**Cache Version**: v=2025.01.28.1063
+**Next Steps**: Debug why 0xCBF4 implementation isn't being recognized
+
+**CONFIRMED WORKING STATE**: The emulator is confirmed working at commit `64383a8` where CP/M 2.2 boots correctly:
 - ✅ Boot CP/M 2.2 successfully and reach `A>` prompt
 - ✅ Switch between drives (A:, B:, C:, etc.)
 - ✅ Load and run basic CP/M programs
 - ✅ Execute *some* .COM files from disk images
 - ✅ Microsoft BASIC works correctly on drive B:
 - ✅ **CONFIRMED**: Successfully loaded and ran Star Trek (.BAS) in Microsoft BASIC
-
-**Test Results**:
-- ✅ CP/M boots to `A>` prompt
-- ✅ Drive switching works (`B:` command)
-- ✅ Microsoft BASIC loads from drive B:
-- ✅ Star Trek game loads and runs in BASIC
-- ✅ Terminal interface working correctly on port 8080
 
 ## Known Issues (From Working State)
 
