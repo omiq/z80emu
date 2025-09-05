@@ -150,6 +150,12 @@ This document lists all Z80 instructions currently implemented in the `z80-adapt
 | 0x87 | ADD A,A | Add A to A | 4 |
 | 0xC6 | ADD A,n | Add immediate value to A | 7 |
 
+### ADC Instructions (Add with Carry)
+| Opcode | Instruction | Description | Cycles |
+|--------|-------------|-------------|---------|
+| 0x8F | ADC A,A | Add A with carry to A | 4 |
+| 0xCE | ADC A,n | Add immediate with carry to A | 7 |
+
 ### SUB Instructions
 | Opcode | Instruction | Description | Cycles |
 |--------|-------------|-------------|---------|
@@ -344,6 +350,7 @@ This document lists all Z80 instructions currently implemented in the `z80-adapt
 | 0xAA | XOR D | XOR D with A | 4 |
 | 0xAB | XOR E | XOR E with A | 4 |
 | 0xAF | XOR A | XOR A with A (zero A) | 4 |
+| 0xEE | XOR n | XOR immediate with A | 7 |
 
 ## Compare Operations
 
@@ -375,6 +382,10 @@ This document lists all Z80 instructions currently implemented in the `z80-adapt
 | Opcode | Instruction | Description | Cycles |
 |--------|-------------|-------------|---------|
 | 0xCB3F | SRL A | Shift right logical A | 8 |
+| 0xCB46 | BIT 0,(HL) | Test bit 0 of memory at HL | 12 |
+| 0xCB7E | BIT 7,(HL) | Test bit 7 of memory at HL | 12 |
+| 0xCB86 | RES 0,(HL) | Reset bit 0 of memory at HL | 15 |
+| 0xCBFE | SET 7,(HL) | Set bit 7 of memory at HL | 15 |
 | 0xCBFC | SET 7,H | Set bit 7 of H register | 8 |
 
 ## ED Prefix Instructions (Extended Z80)
@@ -426,7 +437,22 @@ This document lists all Z80 instructions currently implemented in the `z80-adapt
 ### Block Transfer
 | Opcode | Instruction | Description | Cycles |
 |--------|-------------|-------------|---------|
+| 0xEDA0 | LDI | Load, increment (single) | 16 |
 | 0xEDB0 | LDIR | Load, increment, repeat | 21/16 |
+
+### Block Compare
+| Opcode | Instruction | Description | Cycles |
+|--------|-------------|-------------|---------|
+| 0xEDA1 | CPI | Compare, increment (single) | 16 |
+| 0xEDB1 | CPIR | Compare, increment, repeat | 21/16 |
+
+### Block I/O
+| Opcode | Instruction | Description | Cycles |
+|--------|-------------|-------------|---------|
+| 0xEDA2 | INI | Input, increment (single) | 16 |
+| 0xEDB2 | INIR | Input, increment, repeat | 21/16 |
+| 0xEDA3 | OUTI | Output, increment (single) | 16 |
+| 0xEDB3 | OTIR | Output, increment, repeat | 21/16 |
 
 ### Other ED Instructions
 | Opcode | Instruction | Description | Cycles |

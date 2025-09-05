@@ -142,6 +142,10 @@ class Z80Adapter {
             0x87: () => { this.a = this.add1(this.a, this.a); this.cycles += 4; }, // ADD A,A
             0xC6: () => { this.a = this.add1(this.a, this.next1()); this.cycles += 7; }, // ADD A,n
             
+            // 8-bit add with carry operations
+            0x8F: () => { this.a = this.adc1(this.a, this.a); this.cycles += 4; }, // ADC A,A
+            0xCE: () => { this.a = this.adc1(this.a, this.next1()); this.cycles += 7; }, // ADC A,n
+            
             // 8-bit subtraction operations
             0x90: () => { this.a = this.sub1(this.a, this.b); this.cycles += 4; }, // SUB A,B
             0x91: () => { this.a = this.sub1(this.a, this.c); this.cycles += 4; }, // SUB A,C
@@ -348,6 +352,38 @@ class Z80Adapter {
                 this.h |= 0x80;
                 this.cycles += 8;
             }, // SET 7,H
+            
+            // CB prefix bit operations on (HL)
+            0xCB46: () => { // BIT 0,(HL)
+                const value = this.r1(this.hl);
+                this.zf = (value & 0x01) === 0;
+                this.nf = false;
+                this.hf = true;
+                this.cycles += 12;
+            }, // BIT 0,(HL)
+            
+            0xCB7E: () => { // BIT 7,(HL)
+                const value = this.r1(this.hl);
+                this.zf = (value & 0x80) === 0;
+                this.nf = false;
+                this.hf = true;
+                this.cycles += 12;
+            }, // BIT 7,(HL)
+            
+            0xCB86: () => { // RES 0,(HL)
+                const addr = this.hl;
+                const value = this.r1(addr) & 0xFE; // Clear bit 0
+                this.w1(addr, value);
+                this.cycles += 15;
+            }, // RES 0,(HL)
+            
+            0xCBFE: () => { // SET 7,(HL)
+                const addr = this.hl;
+                const value = this.r1(addr) | 0x80; // Set bit 7
+                this.w1(addr, value);
+                this.cycles += 15;
+            }, // SET 7,(HL)
+            
             0xDD36: () => { // LD (IX+d),n
                 const offset = this.next1s();
                 const addr = (this.ix + offset) & 0xFFFF;
@@ -462,6 +498,7 @@ class Z80Adapter {
             0xAA: () => { this.a = this.xorByte(this.a, this.d); this.cycles += 4; }, // XOR D
             0xAB: () => { this.a = this.xorByte(this.a, this.e); this.cycles += 4; }, // XOR E
             0xAF: () => { this.a = 0; this.zf = true; this.sf = false; this.pf = true; this.cf = false; this.hf = false; this.nf = false; this.cycles += 4; }, // XOR A
+            0xEE: () => { this.a = this.xorByte(this.a, this.next1()); this.cycles += 7; }, // XOR n
             
             // OR operations - CRITICAL FOR CP/M BOOT!
             0xB0: () => { this.a = this.or1(this.a, this.b); this.cycles += 4; }, // OR B
@@ -544,6 +581,97 @@ class Z80Adapter {
                 this.hf = false; // HF is reset
                 this.pf = false; // PF is reset
             }, // LDIR
+            
+            // Block transfer instructions - single operations
+            0xEDA0: () => { // LDI (Load, Increment)
+                const value = this.r1(this.hl);
+                this.w1(this.de, value);
+                this.hl = (this.hl + 1) & 0xFFFF;
+                this.de = (this.de + 1) & 0xFFFF;
+                this.bc = (this.bc - 1) & 0xFFFF;
+                this.zf = (this.bc === 0);
+                this.nf = false;
+                this.hf = false;
+                this.pf = false;
+                this.cycles += 16;
+            }, // LDI
+            
+            // Block compare instructions
+            0xEDA1: () => { // CPI (Compare, Increment)
+                const value = this.r1(this.hl);
+                const result = (this.a - value) & 0xFF;
+                this.hl = (this.hl + 1) & 0xFFFF;
+                this.bc = (this.bc - 1) & 0xFFFF;
+                this.zf = (result === 0);
+                this.sf = (result & 0x80) !== 0;
+                this.hf = ((this.a & 0x0F) - (value & 0x0F)) < 0;
+                this.pf = (this.bc !== 0);
+                this.nf = true;
+                this.cycles += 16;
+            }, // CPI
+            
+            0xEDB1: () => { // CPIR (Compare, Increment, Repeat)
+                do {
+                    const value = this.r1(this.hl);
+                    const result = (this.a - value) & 0xFF;
+                    this.hl = (this.hl + 1) & 0xFFFF;
+                    this.bc = (this.bc - 1) & 0xFFFF;
+                    this.zf = (result === 0);
+                    this.sf = (result & 0x80) !== 0;
+                    this.hf = ((this.a & 0x0F) - (value & 0x0F)) < 0;
+                    this.pf = (this.bc !== 0);
+                    this.nf = true;
+                    this.cycles += 21;
+                } while (this.bc !== 0 && !this.zf);
+                this.cycles += 5; // Extra cycles when BC becomes 0 or match found
+            }, // CPIR
+            
+            // Block I/O instructions
+            0xEDA2: () => { // INI (Input, Increment)
+                const value = this.memio.input(this.bc) & 0xFF;
+                this.w1(this.hl, value);
+                this.hl = (this.hl + 1) & 0xFFFF;
+                this.b = (this.b - 1) & 0xFF;
+                this.zf = (this.b === 0);
+                this.nf = true;
+                this.cycles += 16;
+            }, // INI
+            
+            0xEDB2: () => { // INIR (Input, Increment, Repeat)
+                do {
+                    const value = this.memio.input(this.bc) & 0xFF;
+                    this.w1(this.hl, value);
+                    this.hl = (this.hl + 1) & 0xFFFF;
+                    this.b = (this.b - 1) & 0xFF;
+                    this.zf = (this.b === 0);
+                    this.nf = true;
+                    this.cycles += 21;
+                } while (this.b !== 0);
+                this.cycles += 5; // Extra cycles when B becomes 0
+            }, // INIR
+            
+            0xEDA3: () => { // OUTI (Output, Increment)
+                const value = this.r1(this.hl);
+                this.memio.output(this.bc, value);
+                this.hl = (this.hl + 1) & 0xFFFF;
+                this.b = (this.b - 1) & 0xFF;
+                this.zf = (this.b === 0);
+                this.nf = true;
+                this.cycles += 16;
+            }, // OUTI
+            
+            0xEDB3: () => { // OTIR (Output, Increment, Repeat)
+                do {
+                    const value = this.r1(this.hl);
+                    this.memio.output(this.bc, value);
+                    this.hl = (this.hl + 1) & 0xFFFF;
+                    this.b = (this.b - 1) & 0xFF;
+                    this.zf = (this.b === 0);
+                    this.nf = true;
+                    this.cycles += 21;
+                } while (this.b !== 0);
+                this.cycles += 5; // Extra cycles when B becomes 0
+            }, // OTIR
             
             // FD prefix instructions (IY register instructions)
             0xFDE5: () => { // PUSH IY
@@ -910,6 +1038,18 @@ class Z80Adapter {
         this.sf = (result & 0x80) !== 0;
         this.hf = ((a & 0x0F) + (b & 0x0F)) > 0x0F;
         this.cf = (a + b) > 0xFF;
+        this.pf = this.calcParity(result);
+        this.nf = false;
+        return result;
+    }
+
+    adc1(a, b) {
+        const carry = this.cf ? 1 : 0;
+        const result = (a + b + carry) & 0xFF;
+        this.zf = (result === 0);
+        this.sf = (result & 0x80) !== 0;
+        this.hf = ((a & 0x0F) + (b & 0x0F) + carry) > 0x0F;
+        this.cf = (a + b + carry) > 0xFF;
         this.pf = this.calcParity(result);
         this.nf = false;
         return result;

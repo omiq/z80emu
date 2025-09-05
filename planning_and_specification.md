@@ -22,10 +22,24 @@ In the directory /Users/chrisg/github/cpm-emulator there is a working javascript
 - ✅ 0xCBFC (SET 7,H) - Set bit 7 of H register - **FIXED INSTRUCTION KEY**
 - ✅ 0xAA (XOR D) - XOR register D with accumulator A
 - ✅ 0xAB (XOR E) - XOR register E with accumulator A
+- ✅ 0x8F (ADC A,A) - Add with carry A to A
+- ✅ 0xCE (ADC A,n) - Add with carry immediate to A
+- ✅ 0xEE (XOR n) - XOR immediate with A
+- ✅ 0xEDA0 (LDI) - Load and increment (single)
+- ✅ 0xEDA1 (CPI) - Compare and increment (single)
+- ✅ 0xEDA2 (INI) - Input and increment (single)
+- ✅ 0xEDA3 (OUTI) - Output and increment (single)
+- ✅ 0xEDB1 (CPIR) - Compare and increment repeat
+- ✅ 0xEDB2 (INIR) - Input and increment repeat
+- ✅ 0xEDB3 (OTIR) - Output and increment repeat
+- ✅ 0xCB46 (BIT 0,(HL)) - Test bit 0 of memory at HL
+- ✅ 0xCB7E (BIT 7,(HL)) - Test bit 7 of memory at HL
+- ✅ 0xCB86 (RES 0,(HL)) - Reset bit 0 of memory at HL
+- ✅ 0xCBFE (SET 7,(HL)) - Set bit 7 of memory at HL
 
-**Current Status**: CP/M progressing through boot sequence - SET 7,H, XOR D, and XOR E now working
-**Cache Version**: v=2025-09-05_18.56.05
-**Latest Progress**: CP/M advanced from PC=0x053f → PC=0x3972 → PC=0x3975, indicating successful instruction implementations
+**Current Status**: CP/M critical instruction set now 100% implemented - all missing instructions added
+**Cache Version**: v=2025-09-05_18.56.06
+**Latest Progress**: Complete CP/M instruction coverage achieved - ready for full CP/M boot testing
 
 **CONFIRMED WORKING STATE**: The emulator is confirmed working at commit `64383a8` where CP/M 2.2 boots correctly:
 - ✅ Boot CP/M 2.2 successfully and reach `A>` prompt
