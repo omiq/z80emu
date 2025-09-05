@@ -36,6 +36,16 @@ class Z80Adapter {
         this.cycles = 0;
         this.halted = false;
         this.prefix = 0; // For handling prefix bytes (CB, ED, DD, FD)
+        
+        // Z80 alternate registers
+        this.a_ = 0;
+        this.f_ = 0;
+        this.b_ = 0;
+        this.c_ = 0;
+        this.d_ = 0;
+        this.e_ = 0;
+        this.h_ = 0;
+        this.l_ = 0;
     }
 
     // Initialize instruction tables
@@ -72,20 +82,83 @@ class Z80Adapter {
             0x4B: () => { this.c = this.e; this.cycles += 4; }, // LD C,E
             0x4C: () => { this.c = this.h; this.cycles += 4; }, // LD C,H
             0x4D: () => { this.c = this.l; this.cycles += 4; }, // LD C,L
+            0x4F: () => { this.c = this.a; this.cycles += 4; }, // LD C,A
             
-            // LD A,<reg> instructions - CRITICAL FOR CP/M BOOT!
+            0x50: () => { this.d = this.b; this.cycles += 4; }, // LD D,B
+            0x51: () => { this.d = this.c; this.cycles += 4; }, // LD D,C
+            0x52: () => { this.d = this.d; this.cycles += 4; }, // LD D,D
+            0x53: () => { this.d = this.e; this.cycles += 4; }, // LD D,E
+            0x54: () => { this.d = this.h; this.cycles += 4; }, // LD D,H
+            0x55: () => { this.d = this.l; this.cycles += 4; }, // LD D,L
+            0x57: () => { this.d = this.a; this.cycles += 4; }, // LD D,A
+            
+            0x58: () => { this.e = this.b; this.cycles += 4; }, // LD E,B
+            0x59: () => { this.e = this.c; this.cycles += 4; }, // LD E,C
+            0x5A: () => { this.e = this.d; this.cycles += 4; }, // LD E,D
+            0x5B: () => { this.e = this.e; this.cycles += 4; }, // LD E,E
+            0x5C: () => { this.e = this.h; this.cycles += 4; }, // LD E,H
+            0x5D: () => { this.e = this.l; this.cycles += 4; }, // LD E,L
+            0x5F: () => { this.e = this.a; this.cycles += 4; }, // LD E,A
+            
+            0x60: () => { this.h = this.b; this.cycles += 4; }, // LD H,B
+            0x61: () => { this.h = this.c; this.cycles += 4; }, // LD H,C
+            0x62: () => { this.h = this.d; this.cycles += 4; }, // LD H,D
+            0x63: () => { this.h = this.e; this.cycles += 4; }, // LD H,E
+            0x64: () => { this.h = this.h; this.cycles += 4; }, // LD H,H
+            0x65: () => { this.h = this.l; this.cycles += 4; }, // LD H,L
+            0x67: () => { this.h = this.a; this.cycles += 4; }, // LD H,A
+            
+            0x68: () => { this.l = this.b; this.cycles += 4; }, // LD L,B
+            0x69: () => { this.l = this.c; this.cycles += 4; }, // LD L,C
+            0x6A: () => { this.l = this.d; this.cycles += 4; }, // LD L,D
+            0x6B: () => { this.l = this.e; this.cycles += 4; }, // LD L,E
+            0x6C: () => { this.l = this.h; this.cycles += 4; }, // LD L,H
+            0x6D: () => { this.l = this.l; this.cycles += 4; }, // LD L,L
+            0x6F: () => { this.l = this.a; this.cycles += 4; }, // LD L,A
+            
             0x78: () => { this.a = this.b; this.cycles += 4; }, // LD A,B
             0x79: () => { this.a = this.c; this.cycles += 4; }, // LD A,C
             0x7A: () => { this.a = this.d; this.cycles += 4; }, // LD A,D
             0x7B: () => { this.a = this.e; this.cycles += 4; }, // LD A,E
             0x7C: () => { this.a = this.h; this.cycles += 4; }, // LD A,H
             0x7D: () => { this.a = this.l; this.cycles += 4; }, // LD A,L
+            0x7F: () => { this.a = this.a; this.cycles += 4; }, // LD A,A
+            
+            // Memory operations
+            0x02: () => { this.w1(this.bc, this.a); this.cycles += 7; }, // LD (BC),A
+            0x0A: () => { this.a = this.r1(this.bc); this.cycles += 7; }, // LD A,(BC)
+            0x12: () => { this.w1(this.de, this.a); this.cycles += 7; }, // LD (DE),A
+            0x1A: () => { this.a = this.r1(this.de); this.cycles += 7; }, // LD A,(DE)
+            0x36: () => { this.w1(this.hl, this.next1()); this.cycles += 10; }, // LD (HL),n
+            
+            // 8-bit arithmetic operations
+            0x80: () => { this.a = this.add1(this.a, this.b); this.cycles += 4; }, // ADD A,B
+            0x81: () => { this.a = this.add1(this.a, this.c); this.cycles += 4; }, // ADD A,C
+            0x82: () => { this.a = this.add1(this.a, this.d); this.cycles += 4; }, // ADD A,D
+            0x83: () => { this.a = this.add1(this.a, this.e); this.cycles += 4; }, // ADD A,E
+            0x84: () => { this.a = this.add1(this.a, this.h); this.cycles += 4; }, // ADD A,H
+            0x85: () => { this.a = this.add1(this.a, this.l); this.cycles += 4; }, // ADD A,L
+            0x86: () => { this.a = this.add1(this.a, this.r1(this.hl)); this.cycles += 7; }, // ADD A,(HL)
+            0x87: () => { this.a = this.add1(this.a, this.a); this.cycles += 4; }, // ADD A,A
+            0xC6: () => { this.a = this.add1(this.a, this.next1()); this.cycles += 7; }, // ADD A,n
+            
+            // 8-bit subtraction operations
+            0x90: () => { this.a = this.sub1(this.a, this.b); this.cycles += 4; }, // SUB A,B
+            0x91: () => { this.a = this.sub1(this.a, this.c); this.cycles += 4; }, // SUB A,C
+            0x92: () => { this.a = this.sub1(this.a, this.d); this.cycles += 4; }, // SUB A,D
+            0x93: () => { this.a = this.sub1(this.a, this.e); this.cycles += 4; }, // SUB A,E
+            0x94: () => { this.a = this.sub1(this.a, this.h); this.cycles += 4; }, // SUB A,H
+            0x95: () => { this.a = this.sub1(this.a, this.l); this.cycles += 4; }, // SUB A,L
+            0x96: () => { this.a = this.sub1(this.a, this.r1(this.hl)); this.cycles += 7; }, // SUB A,(HL)
+            0x97: () => { this.a = this.sub1(this.a, this.a); this.cycles += 4; }, // SUB A,A
+            0xD6: () => { this.a = this.sub1(this.a, this.next1()); this.cycles += 7; }, // SUB A,n
             
             // LD <reg>,A instructions - CRITICAL FOR CP/M BOOT!
             0x47: () => { this.b = this.a; this.cycles += 4; }, // LD B,A
             0x4F: () => { this.c = this.a; this.cycles += 4; }, // LD C,A
             0x57: () => { this.d = this.a; this.cycles += 4; }, // LD D,A
             0x5F: () => { this.e = this.a; this.cycles += 4; }, // LD E,A
+            0x62: () => { this.h = this.d; this.cycles += 4; }, // LD H,D
             0x67: () => { this.h = this.a; this.cycles += 4; }, // LD H,A
             0x6B: () => { this.l = this.e; this.cycles += 4; }, // LD L,E
             0x6F: () => { this.l = this.a; this.cycles += 4; }, // LD L,A
@@ -126,6 +199,7 @@ class Z80Adapter {
             0xCA: () => { const addr = this.next2(); if (this.zf) this.pc = addr; this.cycles += 10; }, // JP Z,nn
             0xD2: () => { const addr = this.next2(); if (!this.cf) this.pc = addr; this.cycles += 10; }, // JP NC,nn
             0xDA: () => { const addr = this.next2(); if (this.cf) this.pc = addr; this.cycles += 10; }, // JP C,nn
+            0xFA: () => { const addr = this.next2(); if (this.sf) this.pc = addr; this.cycles += 10; }, // JP M,nn
 
                 // Exchange instructions - CRITICAL FOR CP/M BOOT!
             0xEB: () => { const temp = this.de; this.de = this.hl; this.hl = temp; this.cycles += 4; }, // EX DE,HL
@@ -220,6 +294,93 @@ class Z80Adapter {
             // Critical jumps for CP/M
             0xCD: () => { this.push(this.pc + 2); this.pc = this.next2(); this.cycles += 17; }, // CALL nn
             0xE9: () => { this.pc = this.hl; this.cycles += 4; }, // JP (HL)
+            0x18: () => { // JR nn (Jump Relative)
+                const offset = this.next1s();
+                this.pc = (this.pc + offset) & 0xFFFF;
+                this.cycles += 12;
+            }, // JR nn
+            0x28: () => { // JR Z,d (Jump Relative if Zero)
+                const offset = this.next1s();
+                this.cycles += 7;
+                if (this.zf) {
+                    this.pc = (this.pc + offset) & 0xFFFF;
+                    this.cycles += 5;
+                }
+            }, // JR Z,d
+            0x20: () => { // JR NZ,d (Jump Relative if Not Zero)
+                const offset = this.next1s();
+                this.cycles += 7;
+                if (!this.zf) {
+                    this.pc = (this.pc + offset) & 0xFFFF;
+                    this.cycles += 5;
+                }
+            }, // JR NZ,d
+            0x38: () => { // JR C,d (Jump Relative if Carry)
+                const offset = this.next1s();
+                this.cycles += 7;
+                if (this.cf) {
+                    this.pc = (this.pc + offset) & 0xFFFF;
+                    this.cycles += 5;
+                }
+            }, // JR C,d
+            0x30: () => { // JR NC,d (Jump Relative if No Carry)
+                const offset = this.next1s();
+                this.cycles += 7;
+                if (!this.cf) {
+                    this.pc = (this.pc + offset) & 0xFFFF;
+                    this.cycles += 5;
+                }
+            }, // JR NC,d
+            0xCB3F: () => { // SRL A (Shift Right Logical A)
+                this.a = this.srl1(this.a);
+                this.cycles += 8;
+            }, // SRL A
+            0xDD36: () => { // LD (IX+d),n
+                const offset = this.next1s();
+                const addr = (this.ix + offset) & 0xFFFF;
+                const value = this.next1();
+                this.w1(addr, value);
+                this.cycles += 19;
+            }, // LD (IX+d),n
+            0xDD75: () => { // LD (IX+d),L
+                const offset = this.next1s();
+                const addr = (this.ix + offset) & 0xFFFF;
+                this.w1(addr, this.l);
+                this.cycles += 19;
+            }, // LD (IX+d),L
+            0xDD74: () => { // LD (IX+d),H
+                const offset = this.next1s();
+                const addr = (this.ix + offset) & 0xFFFF;
+                this.w1(addr, this.h);
+                this.cycles += 19;
+            }, // LD (IX+d),H
+            0xDD5E: () => { // LD E,(IX+d)
+                const offset = this.next1s();
+                const addr = (this.ix + offset) & 0xFFFF;
+                this.e = this.r1(addr);
+                this.cycles += 19;
+            }, // LD E,(IX+d)
+            0xDD56: () => { // LD D,(IX+d)
+                const offset = this.next1s();
+                const addr = (this.ix + offset) & 0xFFFF;
+                this.d = this.r1(addr);
+                this.cycles += 19;
+            }, // LD D,(IX+d)
+            0xDD4E: () => { // LD C,(IX+d)
+                const offset = this.next1s();
+                const addr = (this.ix + offset) & 0xFFFF;
+                this.c = this.r1(addr);
+                this.cycles += 19;
+            }, // LD C,(IX+d)
+            0x10: () => { // DJNZ (Decrement B and Jump if Not Zero)
+                const offset = this.next1s();
+                this.b = (this.b - 1) & 0xFF;
+                this.cycles += 10;
+                if (this.b !== 0) {
+                    this.pc = (this.pc + offset) & 0xFFFF;
+                    this.cycles += 5;
+                }
+            }, // DJNZ
             
             // Critical control for CP/M
             0xF3: () => { this.iff1 = false; this.iff2 = false; this.cycles += 4; }, // DI
@@ -264,11 +425,25 @@ class Z80Adapter {
             0x1F: () => { const old_cf = this.cf; this.cf = (this.a & 0x01) !== 0; this.a = ((this.a >> 1) | (old_cf ? 0x80 : 0)) & 0xFF; this.cycles += 4; }, // RRA
             0x3F: () => { this.cf = !this.cf; this.cycles += 4; }, // CCF (Complement Carry Flag)
             
+            // Register exchange instructions
+            0xD9: () => { // EXX (Exchange register pairs)
+                // Exchange BC, DE, HL with their alternate counterparts
+                let temp;
+                temp = this.b; this.b = this.b_; this.b_ = temp;
+                temp = this.c; this.c = this.c_; this.c_ = temp;
+                temp = this.d; this.d = this.d_; this.d_ = temp;
+                temp = this.e; this.e = this.e_; this.e_ = temp;
+                temp = this.h; this.h = this.h_; this.h_ = temp;
+                temp = this.l; this.l = this.l_; this.l_ = temp;
+                this.cycles += 4;
+            }, // EXX
+            
             // I/O operations essential for CP/M boot (uses ports 0x0a-0x10)
             0xDB: () => { const port = this.next1(); this.a = this.memio.input(port) & 0xFF; this.cycles += 11; }, // IN A,(n)
             0xD3: () => { const port = this.next1(); this.memio.output(port, this.a); this.cycles += 11; }, // OUT (n),A
 
             // Common zeroing of A used in boot code
+            0xA8: () => { this.a = this.xorByte(this.a, this.b); this.cycles += 4; }, // XOR B
             0xAF: () => { this.a = 0; this.zf = true; this.sf = false; this.pf = true; this.cf = false; this.hf = false; this.nf = false; this.cycles += 4; }, // XOR A
             
             // OR operations - CRITICAL FOR CP/M BOOT!
@@ -335,6 +510,151 @@ class Z80Adapter {
             0xED79: () => { this.memio.output(this.bc, this.a); this.cycles += 12; }, // OUT (C),A
             0xED7A: () => { this.hl = (this.hl + this.sp + (this.cf ? 1 : 0)) & 0xFFFF; this.cycles += 15; }, // ADC HL,SP
             0xED7B: () => { const addr = this.next2(); this.sp = this.r2(addr); this.cycles += 20; }, // LD SP,(nn)
+            
+            // Block transfer instructions
+            0xEDB0: () => { // LDIR (Load, Increment, Repeat)
+                do {
+                    const value = this.r1(this.hl);
+                    this.w1(this.de, value);
+                    this.hl = (this.hl + 1) & 0xFFFF;
+                    this.de = (this.de + 1) & 0xFFFF;
+                    this.bc = (this.bc - 1) & 0xFFFF;
+                    this.cycles += 21;
+                } while (this.bc !== 0);
+                this.cycles += 5; // Extra cycles when BC becomes 0
+                this.zf = true; // ZF is set when BC becomes 0
+                this.nf = false; // NF is reset
+                this.hf = false; // HF is reset
+                this.pf = false; // PF is reset
+            }, // LDIR
+            
+            // FD prefix instructions (IY register instructions)
+            0xFDE5: () => { // PUSH IY
+                this.push(this.iy);
+                this.cycles += 15;
+            }, // PUSH IY
+            0xFDE1: () => { // POP IY
+                this.iy = this.pop();
+                this.cycles += 14;
+            }, // POP IY
+            0xFDE3: () => { // EX (SP),IY (Exchange IY with stack)
+                const temp = this.iy;
+                this.iy = this.r2(this.sp);
+                this.w2(this.sp, temp);
+                this.cycles += 23;
+            }, // EX (SP),IY
+            0xFD21: () => { // LD IY,nn
+                const value = this.next2();
+                this.iy = value;
+                this.cycles += 14;
+            }, // LD IY,nn
+            0xFDCB: () => { // FD CB prefix instruction (IY register with CB bit operations)
+                // This is a complex instruction that requires special handling
+                // The format is: FD CB dd op
+                // where dd is signed displacement and op is the CB operation
+                const offset = this.next1s();
+                const op = this.next1();
+                const addr = (this.iy + offset) & 0xFFFF;
+                
+                // For now, we'll implement a basic version that handles common operations
+                // This is a simplified implementation - a full implementation would need
+                // to handle all CB operations with IY+displacement addressing
+                console.log(`🔍 FD CB instruction: offset=${offset}, op=0x${op.toString(16)}, addr=0x${addr.toString(16)}`);
+                
+                // Basic implementation - just read the value and set some flags
+                const value = this.r1(addr);
+                this.zf = (value === 0);
+                this.sf = (value & 0x80) !== 0;
+                this.cycles += 23; // Base cycles for FD CB instruction
+            }, // FD CB prefix
+            0xFD7E: () => { // LD A,(IY+d)
+                const offset = this.next1s();
+                const addr = (this.iy + offset) & 0xFFFF;
+                this.a = this.r1(addr);
+                this.cycles += 19;
+            }, // LD A,(IY+d)
+            0xFD6E: () => { // LD L,(IY+d)
+                const offset = this.next1s();
+                const addr = (this.iy + offset) & 0xFFFF;
+                this.l = this.r1(addr);
+                this.cycles += 19;
+            }, // LD L,(IY+d)
+            0xFD66: () => { // LD H,(IY+d)
+                const offset = this.next1s();
+                const addr = (this.iy + offset) & 0xFFFF;
+                this.h = this.r1(addr);
+                this.cycles += 19;
+            }, // LD H,(IY+d)
+            0xFDB6: () => { // OR (IY+d)
+                const offset = this.next1s();
+                const addr = (this.iy + offset) & 0xFFFF;
+                const value = this.r1(addr);
+                this.a = this.or1(this.a, value);
+                this.cycles += 19;
+            }, // OR (IY+d)
+            0xFD36: () => { // LD (IY+d),n
+                const offset = this.next1s();
+                const addr = (this.iy + offset) & 0xFFFF;
+                const value = this.next1();
+                this.w1(addr, value);
+                this.cycles += 19;
+            }, // LD (IY+d),n
+            0xFD23: () => { // INC IY
+                this.iy = (this.iy + 1) & 0xFFFF;
+                this.cycles += 10;
+            }, // INC IY
+            
+            // DD prefix instructions (IX register instructions)
+            0xDDE5: () => { // PUSH IX
+                this.push(this.ix);
+                this.cycles += 15;
+            }, // PUSH IX
+            0xDDE1: () => { // POP IX
+                this.ix = this.pop();
+                this.cycles += 14;
+            }, // POP IX
+            0xDD21: () => { // LD IX,nn
+                const value = this.next2();
+                this.ix = value;
+                this.cycles += 14;
+            }, // LD IX,nn
+            0xDD39: () => { // ADD IX,SP
+                const result = (this.ix + this.sp) & 0xFFFF;
+                this.ix = result;
+                // Set flags: CF if result > 0xFFFF, HF for half-carry, NF reset
+                this.cf = (this.ix + this.sp) > 0xFFFF;
+                this.hf = ((this.ix & 0x0FFF) + (this.sp & 0x0FFF)) > 0x0FFF;
+                this.nf = false;
+                this.cycles += 15;
+            }, // ADD IX,SP
+            0xDD6E: () => { // LD L,(IX+d)
+                const offset = this.next1s();
+                const addr = (this.ix + offset) & 0xFFFF;
+                this.l = this.r1(addr);
+                this.cycles += 19;
+            }, // LD L,(IX+d)
+            0xDD66: () => { // LD H,(IX+d)
+                const offset = this.next1s();
+                const addr = (this.ix + offset) & 0xFFFF;
+                this.h = this.r1(addr);
+                this.cycles += 19;
+            }, // LD H,(IX+d)
+            0xDD77: () => { // LD (IX+d),A
+                const offset = this.next1s();
+                const addr = (this.ix + offset) & 0xFFFF;
+                this.w1(addr, this.a);
+                this.cycles += 19;
+            }, // LD (IX+d),A
+            0xDD7E: () => { // LD A,(IX+d)
+                const offset = this.next1s();
+                const addr = (this.ix + offset) & 0xFFFF;
+                this.a = this.r1(addr);
+                this.cycles += 19;
+            }, // LD A,(IX+d)
+            0xDDF9: () => { // LD SP,IX
+                this.sp = this.ix;
+                this.cycles += 10;
+            }, // LD SP,IX
         };
     }
 
@@ -608,6 +928,28 @@ class Z80Adapter {
         this.sf = (result & 0x80) !== 0;
         this.hf = false;
         this.cf = false;
+        this.pf = this.calcParity(result);
+        this.nf = false;
+        return result;
+    }
+
+    xorByte(a, b) {
+        const result = (a ^ b) & 0xFF;
+        this.zf = (result === 0);
+        this.sf = (result & 0x80) !== 0;
+        this.hf = false;
+        this.cf = false;
+        this.pf = this.calcParity(result);
+        this.nf = false;
+        return result;
+    }
+
+    srl1(v) { // SRL r - Shift Right Logical
+        const result = v >> 1;
+        this.cf = (v & 0x01) !== 0;
+        this.zf = (result === 0);
+        this.sf = false;
+        this.hf = false;
         this.pf = this.calcParity(result);
         this.nf = false;
         return result;

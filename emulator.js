@@ -1317,10 +1317,17 @@ Emulator.prototype.handleDiskIconDrop = function(evt, driveNum) {
 // Switch to Z80Adapter for better instruction support
 Emulator.prototype.switchToZ80Adapter = function() {
   if (this.z80Adapter) return; // Already switched
-  
+
   try {
     console.log('Switching to Z80Adapter for better instruction support...');
-    
+
+    // Check if Z80Adapter is available
+    if (typeof Z80Adapter === 'undefined') {
+      console.error('Z80Adapter is not defined - script may not be loaded');
+      this.vt100('Warning: Z80Adapter not available\r\n');
+      return;
+    }
+
     // Create Z80Adapter with current CPU state
     this.z80Adapter = new Z80Adapter(this.memio);
     
