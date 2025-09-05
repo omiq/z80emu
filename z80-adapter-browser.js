@@ -573,6 +573,12 @@ class Z80Adapter {
                 const op = this.next1();
                 const addr = (this.iy + offset) & 0xFFFF;
                 
+                if (op === 0xFE) { // SET 7,(IY+d)
+                    this.w1(addr, this.r1(addr) | 0x80);
+                    this.cycles += 0; // already counted base 23 cycles above
+                    return;
+                }
+                
                 // For now, we'll implement a basic version that handles common operations
                 // This is a simplified implementation - a full implementation would need
                 // to handle all CB operations with IY+displacement addressing

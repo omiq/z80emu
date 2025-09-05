@@ -446,12 +446,12 @@ Our Z80Adapter now supports:
 - **Stack Operations**: PUSH, POP for various registers including IX and IY
 - **16-bit Arithmetic Operations**: ADD IX,SP, INC IY, etc.
 - **16-bit Register Operations**: LD SP,IX, LD IY,nn
-- **Indexed Addressing Mode**: Complete support for (IX+d) and (IY+d) addressing
+- **Indexed Addressing Mode**: Partial support for (IX+d) and (IY+d) addressing
 - **Conditional Jumps**: JR Z,d, JR NZ,d, JR NC,d, JR C,d, etc.
 - **Logical Operations**: OR, XOR with indexed addressing and register operations
 - **Memory Store Operations**: LD (IY+d),n, LD (IX+d),n, LD (IX+d),L, LD (IX+d),H
 - **Memory Load Operations**: LD C,(IX+d), LD D,(IX+d), LD E,(IX+d), LD L,(IX+d), LD H,(IX+d), LD A,(IX+d), LD L,(IY+d), LD H,(IY+d), etc.
-- **Complex Prefix Instructions**: FD CB prefix for IY register with bit operations
+- **FD CB/DD CB bit operations**: partial stub present; implement per-opcode transforms next.
 - **Bit Manipulation Operations**: SRL A - Shift Right Logical
 
 ### Systematic Approach
