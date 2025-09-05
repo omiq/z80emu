@@ -35,6 +35,7 @@ class Z80Adapter {
         this.im = 0;
         this.cycles = 0;
         this.halted = false;
+        this.prefix = 0; // For handling prefix bytes (CB, ED, DD, FD)
     }
 
     // Initialize instruction tables
@@ -86,6 +87,7 @@ class Z80Adapter {
             0x57: () => { this.d = this.a; this.cycles += 4; }, // LD D,A
             0x5F: () => { this.e = this.a; this.cycles += 4; }, // LD E,A
             0x67: () => { this.h = this.a; this.cycles += 4; }, // LD H,A
+            0x6B: () => { this.l = this.e; this.cycles += 4; }, // LD L,E
             0x6F: () => { this.l = this.a; this.cycles += 4; }, // LD L,A
             
             // Memory operations
@@ -260,6 +262,7 @@ class Z80Adapter {
             0x0F: () => { this.a = ((this.a >> 1) | (this.a << 7)) & 0xFF; this.cf = (this.a & 0x80) !== 0; this.cycles += 4; }, // RRCA
             0x17: () => { const old_cf = this.cf; this.cf = (this.a & 0x80) !== 0; this.a = ((this.a << 1) | (old_cf ? 0x01 : 0)) & 0xFF; this.cycles += 4; }, // RLA
             0x1F: () => { const old_cf = this.cf; this.cf = (this.a & 0x01) !== 0; this.a = ((this.a >> 1) | (old_cf ? 0x80 : 0)) & 0xFF; this.cycles += 4; }, // RRA
+            0x3F: () => { this.cf = !this.cf; this.cycles += 4; }, // CCF (Complement Carry Flag)
             
             // I/O operations essential for CP/M boot (uses ports 0x0a-0x10)
             0xDB: () => { const port = this.next1(); this.a = this.memio.input(port) & 0xFF; this.cycles += 11; }, // IN A,(n)
@@ -286,6 +289,52 @@ class Z80Adapter {
             0x73: () => { this.w1(this.hl, this.e); this.cycles += 7; }, // LD (HL),E
             0x74: () => { this.w1(this.hl, this.h); this.cycles += 7; }, // LD (HL),H
             0x75: () => { this.w1(this.hl, this.l); this.cycles += 7; }, // LD (HL),L
+            
+            // ED prefix instructions (Extended Z80 instructions)
+            0xED40: () => { this.b = this.memio.input(this.bc) & 0xFF; this.cycles += 12; }, // IN B,(C)
+            0xED41: () => { this.memio.output(this.bc, this.b); this.cycles += 12; }, // OUT (C),B
+            0xED42: () => { this.hl = (this.hl - this.bc - (this.cf ? 1 : 0)) & 0xFFFF; this.cycles += 15; }, // SBC HL,BC
+            0xED43: () => { const addr = this.next2(); this.w2(addr, this.bc); this.cycles += 20; }, // LD (nn),BC
+            0xED44: () => { this.a = this.neg(this.a); this.cycles += 8; }, // NEG
+            0xED45: () => { this.pc = this.pop(); this.cycles += 14; }, // RETN
+            0xED46: () => { this.im = 0; this.cycles += 8; }, // IM 0
+            0xED47: () => { this.i = this.a; this.cycles += 9; }, // LD I,A
+            0xED48: () => { this.c = this.memio.input(this.bc) & 0xFF; this.cycles += 12; }, // IN C,(C)
+            0xED49: () => { this.memio.output(this.bc, this.c); this.cycles += 12; }, // OUT (C),C
+            0xED4A: () => { this.hl = (this.hl + this.bc + (this.cf ? 1 : 0)) & 0xFFFF; this.cycles += 15; }, // ADC HL,BC
+            0xED4B: () => { const addr = this.next2(); this.bc = this.r2(addr); this.cycles += 20; }, // LD BC,(nn)
+            0xED4D: () => { this.pc = this.pop(); this.cycles += 14; }, // RETI
+            0xED4F: () => { this.r = this.a; this.cycles += 9; }, // LD R,A
+            0xED50: () => { this.d = this.memio.input(this.bc) & 0xFF; this.cycles += 12; }, // IN D,(C)
+            0xED51: () => { this.memio.output(this.bc, this.d); this.cycles += 12; }, // OUT (C),D
+            0xED52: () => { this.hl = (this.hl - this.de - (this.cf ? 1 : 0)) & 0xFFFF; this.cycles += 15; }, // SBC HL,DE
+            0xED53: () => { const addr = this.next2(); this.w2(addr, this.de); this.cycles += 20; }, // LD (nn),DE
+            0xED56: () => { this.im = 1; this.cycles += 8; }, // IM 1
+            0xED57: () => { this.a = this.i; this.cycles += 9; }, // LD A,I
+            0xED58: () => { this.e = this.memio.input(this.bc) & 0xFF; this.cycles += 12; }, // IN E,(C)
+            0xED59: () => { this.memio.output(this.bc, this.e); this.cycles += 12; }, // OUT (C),E
+            0xED5A: () => { this.hl = (this.hl + this.de + (this.cf ? 1 : 0)) & 0xFFFF; this.cycles += 15; }, // ADC HL,DE
+            0xED5B: () => { const addr = this.next2(); this.de = this.r2(addr); this.cycles += 20; }, // LD DE,(nn)
+            0xED5E: () => { this.im = 2; this.cycles += 8; }, // IM 2
+            0xED5F: () => { this.a = this.r; this.cycles += 9; }, // LD A,R
+            0xED60: () => { this.h = this.memio.input(this.bc) & 0xFF; this.cycles += 12; }, // IN H,(C)
+            0xED61: () => { this.memio.output(this.bc, this.h); this.cycles += 12; }, // OUT (C),H
+            0xED62: () => { this.hl = (this.hl - this.hl - (this.cf ? 1 : 0)) & 0xFFFF; this.cycles += 15; }, // SBC HL,HL
+            0xED63: () => { const addr = this.next2(); this.w2(addr, this.hl); this.cycles += 20; }, // LD (nn),HL
+            0xED67: () => { this.a = this.rrd(this.a, this.hl); this.cycles += 18; }, // RRD
+            0xED68: () => { this.l = this.memio.input(this.bc) & 0xFF; this.cycles += 12; }, // IN L,(C)
+            0xED69: () => { this.memio.output(this.bc, this.l); this.cycles += 12; }, // OUT (C),L
+            0xED6A: () => { this.hl = (this.hl + this.hl + (this.cf ? 1 : 0)) & 0xFFFF; this.cycles += 15; }, // ADC HL,HL
+            0xED6B: () => { const addr = this.next2(); this.hl = this.r2(addr); this.cycles += 20; }, // LD HL,(nn)
+            0xED6F: () => { this.a = this.rld(this.a, this.hl); this.cycles += 18; }, // RLD
+            0xED70: () => { this.memio.input(this.bc); this.cycles += 12; }, // IN (C) - dummy read
+            0xED71: () => { this.memio.output(this.bc, 0); this.cycles += 12; }, // OUT (C),0
+            0xED72: () => { this.hl = (this.hl - this.sp - (this.cf ? 1 : 0)) & 0xFFFF; this.cycles += 15; }, // SBC HL,SP
+            0xED73: () => { const addr = this.next2(); this.w2(addr, this.sp); this.cycles += 20; }, // LD (nn),SP
+            0xED78: () => { this.a = this.memio.input(this.bc) & 0xFF; this.cycles += 12; }, // IN A,(C)
+            0xED79: () => { this.memio.output(this.bc, this.a); this.cycles += 12; }, // OUT (C),A
+            0xED7A: () => { this.hl = (this.hl + this.sp + (this.cf ? 1 : 0)) & 0xFFFF; this.cycles += 15; }, // ADC HL,SP
+            0xED7B: () => { const addr = this.next2(); this.sp = this.r2(addr); this.cycles += 20; }, // LD SP,(nn)
         };
     }
 
@@ -297,8 +346,20 @@ class Z80Adapter {
         }
 
         try {
-            const opcode = this.next1();
-            const instruction = this.instructions[opcode];
+            let opcode = this.next1();
+            
+            // Handle prefix bytes for Z80 instructions
+            if (this.prefix === 0) {
+                // Check for prefix bytes
+                if (opcode === 0xCB || opcode === 0xED || opcode === 0xDD || opcode === 0xFD) {
+                    this.prefix = opcode;
+                    // Read the next byte as the actual instruction
+                    opcode = this.next1();
+                    console.log(`🔍 PREFIX DETECTED: 0x${this.prefix.toString(16)} + 0x${opcode.toString(16)} = 0x${(this.prefix * 0x100 + opcode).toString(16)}`);
+                }
+            }
+            
+            const instruction = this.instructions[this.prefix * 0x100 + opcode];
             
             // Debug logging for first few steps
             if (this.pc < 0x100) {
@@ -317,11 +378,15 @@ class Z80Adapter {
             
             if (instruction) {
                 instruction();
+                // Reset prefix after executing instruction
+                this.prefix = 0;
                 return true;
             } else {
-                console.error(`❌ UNIMPLEMENTED INSTRUCTION: 0x${opcode.toString(16).padStart(2, '0')} at PC=0x${(this.pc - 1).toString(16).padStart(4, '0')}`);
+                console.error(`❌ UNIMPLEMENTED INSTRUCTION: 0x${(this.prefix * 0x100 + opcode).toString(16).padStart(2, '0')} at PC=0x${(this.pc - 1).toString(16).padStart(4, '0')}`);
                 console.error(`   This instruction is needed for CP/M to boot!`);
                 this.cycles += 4;
+                // Reset prefix after error
+                this.prefix = 0;
                 return false;
             }
         } catch (error) {
@@ -487,6 +552,42 @@ class Z80Adapter {
         this.cf = a < (b + carry);
         this.pf = this.calcParity(result);
         this.nf = true;
+        return result;
+    }
+    
+    // Helper functions for ED prefix instructions
+    neg(value) {
+        const result = (0 - value) & 0xFF;
+        this.zf = (result === 0);
+        this.sf = (result & 0x80) !== 0;
+        this.hf = ((0 & 0x0F) - (value & 0x0F)) < 0;
+        this.pf = this.calcParity(result);
+        this.cf = value !== 0;
+        this.nf = true;
+        return result;
+    }
+    
+    rrd(a, hl) {
+        const mem = this.r1(hl);
+        const result = ((a & 0xF0) | (mem & 0x0F)) & 0xFF;
+        this.w1(hl, ((mem >> 4) | (a << 4)) & 0xFF);
+        this.zf = (result === 0);
+        this.sf = (result & 0x80) !== 0;
+        this.hf = false;
+        this.pf = this.calcParity(result);
+        this.nf = false;
+        return result;
+    }
+    
+    rld(a, hl) {
+        const mem = this.r1(hl);
+        const result = ((a & 0xF0) | ((mem >> 4) & 0x0F)) & 0xFF;
+        this.w1(hl, ((mem << 4) | (a & 0x0F)) & 0xFF);
+        this.zf = (result === 0);
+        this.sf = (result & 0x80) !== 0;
+        this.hf = false;
+        this.pf = this.calcParity(result);
+        this.nf = false;
         return result;
     }
 
