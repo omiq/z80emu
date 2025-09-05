@@ -307,6 +307,16 @@ class Z80Adapter {
             // Critical jumps for CP/M
             0xCD: () => { this.push(this.pc + 2); this.pc = this.next2(); this.cycles += 17; }, // CALL nn
             0xE9: () => { this.pc = this.hl; this.cycles += 4; }, // JP (HL)
+            
+            0xEA: () => { // JP PE,nn (Jump if Parity Even)
+                if (this.pf) {
+                    this.pc = this.next2();
+                    this.cycles += 10;
+                } else {
+                    this.pc += 2;
+                    this.cycles += 10;
+                }
+            }, // JP PE,nn
             0x18: () => { // JR nn (Jump Relative)
                 const offset = this.next1s();
                 this.pc = (this.pc + offset) & 0xFFFF;

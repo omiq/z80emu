@@ -240,6 +240,7 @@ This document lists all Z80 instructions currently implemented in the `z80-adapt
 |--------|-------------|-------------|---------|
 | 0xC3 | JP nn | Jump to absolute address | 10 |
 | 0xE9 | JP (HL) | Jump to address in HL | 4 |
+| 0xEA | JP PE,nn | Jump if Parity Even to immediate address | 10 |
 
 ### Conditional Jumps
 | Opcode | Instruction | Description | Cycles |

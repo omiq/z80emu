@@ -271,24 +271,30 @@ Memio.prototype.input = function(port) {
     return this.tape.charCodeAt(this.tapepos++) & 0xff;
     break;
   case 10: // 0x0a FDC drive
+    console.log('Port 10: Drive ' + this.drv + ' (' + String.fromCharCode(65 + this.drv) + ':)');
     return this.drv;
     break;
   case 11: // 0x0b FDC track
+    console.log('Port 11: Track ' + this.trk);
     return this.trk;
     break;
   case 12: // 0x0c FDC sector
+    console.log('Port 12: Sector ' + this.sec);
     return this.sec;
     break;
   case 13: // 0x0d FDC command IO ready?
+    console.log('Port 13: Command ready check - DMA=' + this.dma + ', Drive=' + this.drv + ', Track=' + this.trk + ', Sector=' + this.sec);
     return this.iocount == 0 ? 0xff : 0x00;
     break;
   case 14: // 0x0e FDC status
-    return this.dskstatus;
+    return this.dskstat;
     break;
   case 15: // 0x0f DMA low
+    console.log('Port 15: DMA low = ' + (this.dma & 0xff));
     return this.dma & 0xff;
     break;
   case 16: // 0x10 DMA high
+    console.log('Port 16: DMA high = ' + ((this.dma & 0xff00) >> 8));
     return (this.dma & 0xff00) >> 8;
     break;
   }
@@ -311,6 +317,9 @@ Memio.prototype.output = function(port, value) {
     this.puncher += String.fromCharCode(value);
     break;
   case 10: // 0x0a FDC drive
+    if ((value & 0x0F) >= this.drives.length) {
+      console.warn('Drive select out of range: ' + (value & 0x0F) + ' (max: ' + (this.drives.length - 1) + ')');
+    }
     this.drv = value & 0xff;
     break;
   case 11: // 0x0b FDC track

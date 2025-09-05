@@ -13,6 +13,7 @@ In the directory /Users/chrisg/github/cpm-emulator there is a working javascript
 **ACTIVE DEVELOPMENT**: Currently implementing missing Z80 instructions for CP/M compatibility on branch `feature/z80-library-integration` (commit `7d8ee39`):
 
 **Recently Implemented Instructions**:
+- ✅ 0xEA (JP PE,nn) - Jump if Parity Even to immediate address
 - ✅ **COMPLETE CB PREFIX SET** - All 256 CB prefix instructions implemented
 - ✅ 0xCB00-0xCB0F (RLC/RRC) - Rotate circular instructions for all registers
 - ✅ 0xCB10-0xCB1F (RL/RR) - Rotate through carry instructions for all registers  
@@ -45,9 +46,9 @@ In the directory /Users/chrisg/github/cpm-emulator there is a working javascript
 - ✅ 0xCB86 (RES 0,(HL)) - Reset bit 0 of memory at HL
 - ✅ 0xCBFE (SET 7,(HL)) - Set bit 7 of memory at HL
 
-**Current Status**: Complete CB prefix instruction set implemented (256/256) - Z80 emulator now has full bit manipulation support
-**Cache Version**: v=2025-09-05_18.56.07
-**Latest Progress**: All CB prefix instructions implemented - rotate, shift, bit test, reset, and set operations complete
+**Current Status**: Complete CB prefix instruction set implemented (256/256) + additional CP/M critical instructions
+**Cache Version**: v=2025-09-05_18.56.08
+**Latest Progress**: Added JP PE,nn conditional jump instruction - CP/M boot progress continues
 
 **CONFIRMED WORKING STATE**: The emulator is confirmed working at commit `64383a8` where CP/M 2.2 boots correctly:
 - ✅ Boot CP/M 2.2 successfully and reach `A>` prompt
