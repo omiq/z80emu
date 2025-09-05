@@ -344,6 +344,14 @@ class Z80Adapter {
                 this.a = this.srl1(this.a);
                 this.cycles += 8;
             }, // SRL A
+            0xCBF4: () => { // SET 7,H (Set bit 7 of H register)
+                this.h |= 0x80;
+                this.cycles += 8;
+            }, // SET 7,H
+            0xCBF4: () => { // SET 7,H (Set bit 7 of H register)
+                this.h |= 0x80;
+                this.cycles += 8;
+            }, // SET 7,H
             0xDD36: () => { // LD (IX+d),n
                 const offset = this.next1s();
                 const addr = (this.ix + offset) & 0xFFFF;
@@ -590,6 +598,18 @@ class Z80Adapter {
                 this.l = this.r1(addr);
                 this.cycles += 19;
             }, // LD L,(IY+d)
+            0xFD5E: () => { // LD E,(IY+d)
+                const offset = this.next1s();
+                const addr = (this.iy + offset) & 0xFFFF;
+                this.e = this.r1(addr);
+                this.cycles += 19;
+            }, // LD E,(IY+d)
+            0xFD56: () => { // LD D,(IY+d)
+                const offset = this.next1s();
+                const addr = (this.iy + offset) & 0xFFFF;
+                this.d = this.r1(addr);
+                this.cycles += 19;
+            }, // LD D,(IY+d)
             0xFD66: () => { // LD H,(IY+d)
                 const offset = this.next1s();
                 const addr = (this.iy + offset) & 0xFFFF;
@@ -610,10 +630,33 @@ class Z80Adapter {
                 this.w1(addr, value);
                 this.cycles += 19;
             }, // LD (IY+d),n
+            0xFD75: () => { // LD (IY+d),L
+                const offset = this.next1s();
+                const addr = (this.iy + offset) & 0xFFFF;
+                this.w1(addr, this.l);
+                this.cycles += 19;
+            }, // LD (IY+d),L
+            0xFD74: () => { // LD (IY+d),H
+                const offset = this.next1s();
+                const addr = (this.iy + offset) & 0xFFFF;
+                this.w1(addr, this.h);
+                this.cycles += 19;
+            }, // LD (IY+d),H
+            0xFD77: () => { // LD (IY+d),A
+                const offset = this.next1s();
+                const addr = (this.iy + offset) & 0xFFFF;
+                this.w1(addr, this.a);
+                this.cycles += 19;
+            }, // LD (IY+d),A
             0xFD23: () => { // INC IY
                 this.iy = (this.iy + 1) & 0xFFFF;
                 this.cycles += 10;
             }, // INC IY
+            0xFD19: () => { // ADD IY,DE
+                const result = this.iy + this.de;
+                this.iy = result & 0xFFFF;
+                this.cycles += 15;
+            }, // ADD IY,DE
             0xFDE9: () => { // JP (IY)
                 this.pc = this.iy;
                 this.cycles += 8;
@@ -666,6 +709,14 @@ class Z80Adapter {
                 this.a = this.r1(addr);
                 this.cycles += 19;
             }, // LD A,(IX+d)
+            0xDD34: () => { // INC (IX+d)
+                const offset = this.next1s();
+                const addr = (this.ix + offset) & 0xFFFF;
+                const value = this.r1(addr);
+                const result = this.inc1(value);
+                this.w1(addr, result);
+                this.cycles += 23;
+            }, // INC (IX+d)
             0xDDF9: () => { // LD SP,IX
                 this.sp = this.ix;
                 this.cycles += 10;
